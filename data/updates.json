@@ -1,0 +1,9 @@
+{
+  "updates": [
+    {
+      "version": "1.0.3 Brasscore", 
+      "log": "- Added system Dealership\n- Updated system Fishing\n- Improved side job Bus\n- Improved side job Sweeper\n- Dynamic Weather & Time adjustments\n- Fixed various bugs and errors",
+      "timestamp": "2025-11-27 10:18:01"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "token": "MTAzMTE4MzA1OTI2NzExMzAzMQ.GiqJfu.GggNt-Q-1rJxQTfAwVjTlpoAF7WMuEQLLdqCjY",
+  "dccBotId": "1031183059267113031",
+  "clientId": "1031183059267113031",
+  "guildId": "1330494881746911283",
+  "server": {
+    "serverIP": "35.198.243.227",
+    "serverPort": "7777",
+    "logo": "https://media.discordapp.net/attachments/1330494882778845301/1443922699033514034/20251128_181111.jpg?ex=6932be4e&is=69316cce&hm=5babb52a2e6b740556e584923f3da3f411c37f33f1412e97544a3a233444128e&=&format=webp&width=981&height=981"
+  },
+  "roles": {
+    "adminRole": "1330494881759625272",
+    "serversupport": "1444269566292136059",
+    "roleCitizen": "1330494881746911286"
+  },
+  "ticket": {
+    "categoryId": "1333598021170233374",
+    "logChannelId": "1333608143472693379"
+  },
+  "email": {
+    "service": "gmail",
+    "user": "amarraden5@@gmail.com",
+    "pass": "gahexiopmmpfmqlw"
+  },
+  "channels": {
+    "logsaccCs": "1330494882950676579",
+    "adminLogsCS": "1330494882950676579",
+    "serverstatus": "1330494882950676579",
+    "Faqchannel": "1330494882950676579",
+    "serverstats": "1444472158532145152",
+    "leaderboard": "1444105165601771521"
+  },
+  "database": {
+    "host": "10.148.0.7",
+    "user": "u2_CpeEnbl1rr",
+    "password": "s6r73442++xxqWeXG^0RiaiJ",
+    "database": "s2_valencia"
+  }
+}
