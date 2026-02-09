@@ -11,7 +11,12 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }

@@ -42,8 +42,13 @@ module.exports = {
   customId: "characterInfoModal",
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
-      return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+       return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -58,7 +63,12 @@ module.exports = {
       
       if (characterData.length === 0) {
         return interaction.reply({
-          content: "Karakter tidak ditemukan.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Data not found")
+              .setDescription("Karakter yang diminta tidak ditemukan di database.")
+          ],
           ephemeral: true,
         });
       }
@@ -126,7 +136,12 @@ module.exports = {
     } catch (error) {
       console.error(error);
       await interaction.reply({
-        content: "Terjadi kesalahan saat mengambil informasi karakter.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription("Terjadi kesalahan saat mengambil informasi karakter."),
+        ],
         ephemeral: true,
       });
     }

@@ -5,7 +5,12 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -19,7 +24,12 @@ module.exports = {
 
       if (charData.length === 0) {
         return interaction.reply({
-          content: "Nama karakter tidak ditemukan di database.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Data not found")
+              .setDescription("Nama karakter tidak ditemukan di database.")
+          ],
           ephemeral: true,
         });
       }
@@ -27,13 +37,23 @@ module.exports = {
       await pool.execute("DELETE FROM players WHERE username = ?", [charName]);
 
       await interaction.reply({
-        content: `Berhasil menghapus karakter: **${charName}**`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle("Success")
+            .setDescription(`Berhasil menghapus karakter: **${charName}**`),
+        ],
         ephemeral: true,
       });
     } catch (error) {
       console.error(error);
       await interaction.reply({
-        content: "Terjadi kesalahan saat menghapus karakter.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription("Terjadi kesalahan saat menghapus karakter."),
+        ],
         ephemeral: true,
       });
     }

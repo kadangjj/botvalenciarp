@@ -1,12 +1,23 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { EmbedBuilder } = require("discord.js");
 const { pool } = require("../../functions/database");
 const config = require("../../config.json");
 
 module.exports = {
-  data: {
-    name: "refresh_stats",
-  },
+  customId: "refresh_stats",
   async execute(interaction) {
+    // Cek role admin
+    if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
+      return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
+        ephemeral: true,
+      });
+    }
+
     await interaction.deferUpdate();
 
     try {
@@ -15,10 +26,25 @@ module.exports = {
       const row = createButtons();
 
       await interaction.editReply({ embeds: [statsEmbed], components: [row] });
+      
+      // Kirim notifikasi sukses
+      await interaction.followUp({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setDescription("Statistik server berhasil diperbarui!")
+        ],
+        ephemeral: true,
+      });
     } catch (error) {
       console.error("Error refreshing stats:", error);
       await interaction.followUp({
-        content: "❌ Error saat refresh statistik!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription("Terjadi kesalahan saat memperbarui statistik server.")
+        ],
         ephemeral: true,
       });
     }
@@ -49,6 +75,8 @@ function createStatsEmbed(serverStats) {
 }
 
 function createButtons() {
+  const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+  
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
       .setCustomId("monitor")

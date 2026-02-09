@@ -3,60 +3,68 @@ const axios = require("axios");
 const config = require("../config.json");
 
 const CHANNEL_ID = config.channels.serverstats;
-const SERVER_IP = config.server.serverIP;
-const SERVER_PORT = config.server.serverPort;
+const SERVER_IP = config.server.serverIP || "35.198.243.227";
+const SERVER_PORT = config.server.serverPort || "7777";
+const API_URL = "http://35.198.243.227:6666/api/server-status"; // Ganti dengan VPS IP jika deploy
 
 let embedMessage = null;
 let lastServerData = null;
 
 async function checkServerStatus() {
   try {
-    const url = `https://sam.markski.ar/api/GetServerByIP?ip_addr=${SERVER_IP}:${SERVER_PORT}`;
-    const response = await axios.get(url);
+    const response = await axios.get(API_URL, { 
+      timeout: 5000,
+      headers: {
+        'User-Agent': 'Valencia-Discord-Bot/1.0'
+      }
+    });
     
-    const serverData = response.data;
+    // Log response untuk debug
+  //  console.log('API Response:', response.data);
     
-    // Cek apakah response berisi data server yang valid
-    if (!serverData || !serverData.ipAddr) {
-      console.log('Server offline - no valid data');
+    if (!response.data.success) {
+     // console.log('❌ Server offline - API returned error');
       return {
         status: "🔴 OFFLINE",
-        players: "N/A",
-        maxPlayers: "N/A",
-        uptime: "N/A",
+        players: "0/0",
+        maxPlayers: 0,
         language: "N/A",
         gamemode: "N/A",
       };
     }
 
-    // Cek apakah server membutuhkan password (maintenance)
-    if (serverData.requiresPassword === true) {
+    const data = response.data.data;
+    
+   
+    
+    // Cek maintenance (password protected)
+    if (data.password === true) {
       return {
         status: "🟡 MAINTENANCE",
-        players: `${serverData.playersOnline}/${serverData.maxPlayers}`,
-        maxPlayers: serverData.maxPlayers,
-        language: serverData.language || "Unknown",
-        gamemode: serverData.gameMode || "Unknown",
+        players: `${data.players}/${data.maxPlayers}`,
+        maxPlayers: data.maxPlayers,
+        language: data.language || "Indonesian",
+        gamemode: data.gamemode || "Roleplay",
       };
     }
 
     // Server online
-    const isOnline = serverData.name && serverData.maxPlayers !== undefined;
-    
     return {
-      status: isOnline ? "🟢 ONLINE" : "🔴 OFFLINE",
-      players: `${serverData.playersOnline}/${serverData.maxPlayers}`,
-      maxPlayers: serverData.maxPlayers,
-      language: serverData.language || "Unknown",
-      gamemode: serverData.gameMode || "Unknown",
+      status: data.online ? "🟢 ONLINE" : "🔴 OFFLINE",
+      players: `${data.players}/${data.maxPlayers}`,
+      maxPlayers: data.maxPlayers,
+      language: data.language || "Indonesian",
+      gamemode: data.gamemode || "Roleplay",
+      hostname: data.hostname || "Valencia Roleplay",
+      ping: data.ping || 0
     };
+
   } catch (error) {
-    console.error("Error fetching server status:", error.message);
+    console.error("❌ Error fetching server status:", error.message);
     return {
       status: "🔴 OFFLINE",
       players: "N/A",
       maxPlayers: "N/A",
-      uptime: "N/A",
       language: "N/A",
       gamemode: "N/A",
     };
@@ -66,6 +74,27 @@ async function checkServerStatus() {
 async function updateEmbed(client) {
   try {
     const serverData = await checkServerStatus();
+    
+    // Debug log dengan timestamp
+    const timestamp = new Date().toLocaleTimeString('id-ID', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    //console.log(`[${timestamp}] ${serverData.status} | Players: ${serverData.players} | Language: ${serverData.language}`);
+    
+    // Cek apakah data berubah
+    const dataChanged = JSON.stringify(lastServerData) !== JSON.stringify(serverData);
+    
+    if (!dataChanged && embedMessage) {
+      //console.log('⏸️  Data tidak berubah, skip update');
+      return;
+    }
+    
+    //console.log('📊 Data berubah, updating embed...');
+    lastServerData = { ...serverData };
  
     const embed = new EmbedBuilder()
       .setColor(
@@ -106,15 +135,22 @@ async function updateEmbed(client) {
         }
       )
       .setThumbnail(
-        `https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg?ex=692bc8a4&is=692a7724&hm=845e78348ccf3761a0aac224cf4061752c697f93d5d61b0f3f197ca11b4f859d&`
+        `https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg`
       )
       .setImage(
-        `https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg?ex=692bc8a4&is=692a7724&hm=845e78348ccf3761a0aac224cf4061752c697f93d5d61b0f3f197ca11b4f859d&`
+        `https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg`
       )
       .setFooter({
-        text: "Live Updates Statistic",
-        iconURL:
-          "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg?ex=692bc8a4&is=692a7724&hm=845e78348ccf3761a0aac224cf4061752c697f93d5d61b0f3f197ca11b4f859d&",
+        text: `Last Update: ${new Date().toLocaleString('id-ID', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit', 
+          second: '2-digit',
+          hour12: false
+        })} WIB`,
+        iconURL: "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg",
       })
       .setTimestamp();
 
@@ -129,27 +165,24 @@ async function updateEmbed(client) {
 
     if (!embedMessage) {
       embedMessage = await channel.send({ embeds: [embed] });
+     // console.log('✅ Embed message created');
     } else {
       await embedMessage.edit({ embeds: [embed] });
+     // console.log('✅ Embed message updated');
     }
 
-    const messages = await channel.messages.fetch({ limit: 20 });
-    const otherMessages = messages.filter((msg) => msg.id !== embedMessage.id);
-    otherMessages.forEach(async (msg) => {
-      if (msg.author.id === client.user.id) {
-        await msg.delete();
-      }
-    });
   } catch (error) {
-    console.error("Error updating embed:", error);
+    console.error("❌ Error updating embed:", error);
   }
 }
 
 function startAutoUpdate(client) {
-  updateEmbed(client);
+  console.log('🚀 Starting auto update for server status...');
+  updateEmbed(client); // Update pertama kali
+  
   setInterval(() => {
     updateEmbed(client);
-  }, 5000);
+  }, 900); // Update setiap 3 detik
 }
 
 module.exports = { updateEmbed, startAutoUpdate };

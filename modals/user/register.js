@@ -22,15 +22,21 @@ module.exports = {
       const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
       
       if (!emailRegex.test(email)) {
-        return interaction.editReply({
-          content: "❌ **Email tidak valid!** Mohon masukkan email yang benar.\nContoh: `user@example.com`",
+         return interaction.editReply({
+          embeds: [{
+            color: 0xFF0000,
+            description: "Email tidak valid. Mohon masukkan email yang benar.\nContoh: `user@example.com`"
+          }]
         });
       }
+      
 
-      // Cek apakah user sudah terdaftar
-      if (await isUserRegistered(DiscordID)) {
+     if (await isUserRegistered(DiscordID)) {
         return interaction.editReply({
-          content: "❌ Anda sudah pernah mendaftar.",
+          embeds: [{
+            color: 0xFF0000,
+            description: "Kamu sudah memiliki UCP yang terdaftar."
+          }]
         });
       }
 
@@ -40,33 +46,33 @@ module.exports = {
       if (success) {
         const embed = new EmbedBuilder()
           .setColor("#4715A3")
-          .setTitle("Account Successfully Registered!")
+          .setTitle("UCP Successfully Registered!")
           .setDescription(
             "Selamat! Anda telah berhasil mendaftar akun UCP. Berikut adalah detail akun Anda:\n\n"
           )
           .addFields(
             { 
-              name: "👤 UCP Name", 
+              name: "UCP Name", 
               value: `> \`${ucpName}\``, 
               inline: true 
             },
             { 
-              name: "📧 Email", 
+              name: "Email", 
               value: `> \`${email}\``, 
               inline: true 
             },
             { 
-              name: "🔐 PIN Code", 
+              name: "PIN Code", 
               value: `> \`${verifycode}\``, 
               inline: false 
             },
             {
-              name: "⚠️ Catatan Penting",
+              name: "Catatan Penting",
               value: "```diff\n+ Simpan informasi ini dengan baik\n- Jangan bagikan PIN kepada siapapun\n- Termasuk Tim Administrator!\n```",
               inline: false
             },
             {
-              name: "📌 Langkah Selanjutnya",
+              name: "Langkah Selanjutnya",
               value: "• Login ke UCP menggunakan kredensial di atas\n• Verifikasi email Anda jika diperlukan\n• Mulai petualangan Anda di server!",
               inline: false
             }
@@ -93,19 +99,33 @@ module.exports = {
           console.error("Gagal set nickname/role:", error);
         }
 
-        // Response berdasarkan status DM
+          // Response berdasarkan status DM
         if (dmSent) {
           await interaction.editReply({
-            content: "✅ Registrasi berhasil! Silakan cek DM Anda untuk informasi akun.",
+            embeds: [{
+              color: 0x00FF00,
+              title: "Registrasi Berhasil",
+              description: "Silakan cek DM Anda untuk informasi akun.",
+              footer: { text: "Periksa inbox Discord Anda" }
+            }]
           });
         } else {
           await interaction.editReply({
-            content: "⚠️ Registrasi berhasil, namun bot gagal mengirim DM. Pastikan DM Anda terbuka atau hubungi admin untuk informasi lebih lanjut.",
+            embeds: [{
+              color: 0xFFA500,
+              title: "Registrasi Berhasil",
+              description: "Namun bot gagal mengirim DM. Pastikan DM Anda terbuka atau hubungi admin untuk informasi lebih lanjut.",
+              footer: { text: "Aktifkan DM untuk menerima informasi akun" }
+            }]
           });
         }
       } else {
         await interaction.editReply({
-          content: "❌ Nama UCP sudah digunakan. Silakan coba dengan nama lain.",
+          embeds: [{
+            title: "Registrasi Gagal",
+            color: 0xFF0000,
+            description: "Nama UCP sudah digunakan. Silakan coba dengan nama lain."
+          }]
         });
       }
     } catch (error) {
@@ -114,7 +134,11 @@ module.exports = {
       // Safe error response
       if (interaction.deferred) {
         await interaction.editReply({
-          content: "❌ Terjadi kesalahan saat memproses registrasi. Silakan coba lagi.",
+          embeds: [{
+            title: "Registrasi Gagal",
+            color: 0xFF0000,
+            description: "Terjadi kesalahan saat memproses registrasi. Silakan coba lagi."
+          }]
         }).catch(() => {});
       }
     }

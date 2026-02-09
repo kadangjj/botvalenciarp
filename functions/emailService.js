@@ -24,11 +24,11 @@ async function sendVerificationCode(recipientEmail, data) {
 
   const mailOptions = {
     from: {
-      name: 'UCP System',
+      name: 'Valencia UCP reset password',
       address: config.email.user
     },
     to: recipientEmail,
-    subject: '🔐 Kode Verifikasi - Change Password',
+    subject: 'Kode Verifikasi - Change Password',
     html: `
       <!DOCTYPE html>
       <html>
@@ -72,7 +72,7 @@ async function sendVerificationCode(recipientEmail, data) {
                 <tr>
                   <td style="background-color: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px;">
                     <p style="color: #999; font-size: 12px; margin: 0;">
-                      © ${new Date().getFullYear()} UCP System
+                      © ${new Date().getFullYear()} Valencia UCP System
                     </p>
                   </td>
                 </tr>

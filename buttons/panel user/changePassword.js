@@ -24,7 +24,12 @@ module.exports = {
 
       if (userRows.length === 0) {
         return interaction.reply({
-          content: "❌ Anda belum terdaftar di sistem UCP. Silakan daftar terlebih dahulu.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("UCP Tidak Terdaftar")
+              .setDescription("Anda belum terdaftar di sistem UCP. Silakan daftar terlebih dahulu."),
+          ],
           flags: 64,
         });
       }
@@ -34,7 +39,12 @@ module.exports = {
 
       if (!email) {
         return interaction.reply({
-          content: "❌ Email tidak ditemukan di akun Anda. Silakan update email terlebih dahulu.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Email Tidak Ditemukan")
+              .setDescription("Email tidak ditemukan di akun Anda. Silakan update email terlebih dahulu."),
+          ],
           flags: 64,
         });
       }
@@ -57,7 +67,12 @@ module.exports = {
 
       if (!emailResult.success) {
         return interaction.reply({
-          content: `❌ Gagal mengirim kode verifikasi ke email: ${emailResult.error}`,
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Gagal Mengirim Kode Verifikasi")
+              .setDescription(`Gagal mengirim kode verifikasi ke email: ${emailResult.error}`),
+          ],
           flags: 64,
         });
       }

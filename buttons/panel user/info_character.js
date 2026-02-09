@@ -5,6 +5,7 @@ const {
 } = require("discord.js");
 const { pool } = require("../../functions/database");
 const { getUserCharacters } = require("../../functions/dataFunction");
+const e = require("cors");
 
 module.exports = {
   customId: "info_character",
@@ -18,7 +19,12 @@ module.exports = {
 
     if (userData.length === 0) {
       return interaction.reply({
-        content: "Anda belum mendaftar. Silakan daftar terlebih dahulu.",
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Akun Tidak Terdaftar")
+            .setDescription("Anda belum mendaftar. Silakan daftar terlebih dahulu.")
+            .setColor(0xff0000)
+        ],
         ephemeral: true,
       });
     }
@@ -29,7 +35,12 @@ module.exports = {
 
     if (characters.length === 0) {
       return interaction.reply({
-        content: "Anda belum memiliki karakter.",
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Tidak Ada Karakter")
+            .setDescription("Anda belum memiliki karakter.")
+            .setColor(0xff0000)
+        ],
         ephemeral: true,
       });
     }

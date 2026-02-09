@@ -23,7 +23,12 @@ module.exports = {
     // Check admin role
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -45,7 +50,12 @@ module.exports = {
       if (playerRows.length === 0) {
         await conn.end();
         return interaction.editReply({
-          content: `❌ **Error:** Player \`${playerName}\` tidak ditemukan di database!`,
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Database not found")
+              .setDescription(`**Error:** Player \`${playerName}\` tidak ditemukan di database!`),
+          ],
         });
       }
 
@@ -55,7 +65,12 @@ module.exports = {
       if (currentCS !== 1) {
         await conn.end();
         return interaction.editReply({
-          content: `❌ **Error:** Player \`${playerName}\` tidak memiliki Character Story!`,
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Character Story Not Found")
+              .setDescription(`**Error:** Player \`${playerName}\` tidak memiliki Character Story!`),
+          ],
         });
       }
 
@@ -70,25 +85,25 @@ module.exports = {
       // Success embed
       const embed = new EmbedBuilder()
         .setColor("#FF0000")
-        .setTitle("❌ Character Story Dihapus")
+        .setTitle("Character Story Dihapus")
         .addFields(
           {
-            name: "👤 Player Name",
+            name: "Player Name",
             value: `\`${playerName}\``,
             inline: true,
           },
           {
-            name: "📋 Status",
+            name: "Status",
             value: "**OFFLINE**",
             inline: true,
           },
           {
-            name: "👮 Removed By",
+            name: "Removed By",
             value: `${discordUser}`,
             inline: true,
           },
           {
-            name: "⚠️ Info",
+            name: "Info",
             value: "Player tidak bisa menggunakan senjata saat login.",
             inline: false,
           }
@@ -103,7 +118,12 @@ module.exports = {
     } catch (error) {
       console.error("UnsetCS command error:", error);
       await interaction.editReply({
-        content: `❌ **Error:** ${error.message}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription(`**Error:** ${error.message}`),
+        ],
       });
     }
   },

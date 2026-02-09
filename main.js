@@ -37,7 +37,7 @@ for (const folder of commandFolders) {
     const command = require(`./commands/${folder}/${file}`);
     if ("data" in command && "execute" in command) {
       client.commands.set(command.data.name, command);
-      console.log(`✅ Loaded command: ${command.data.name}`);
+      console.log(`Loaded command: ${command.data.name}`);
     }
   }
 }
@@ -54,7 +54,7 @@ for (const file of eventFiles) {
   } else {
     client.on(event.name, (...args) => event.execute(...args, client));
   }
-  console.log(`✅ Loaded event: ${event.name}`);
+  console.log(`Loaded event: ${event.name}`);
 }
 
 client.buttons = new Collection();
@@ -79,7 +79,7 @@ for (const file of buttonFiles) {
   const button = require(file);
   if (button.customId && typeof button.execute === "function") {
     client.buttons.set(button.customId, button);
-    console.log(`✅ Loaded button: ${button.customId}`);
+    console.log(`Loaded button: ${button.customId}`);
   }
 }
 
@@ -89,7 +89,7 @@ for (const file of modalFiles) {
   const modal = require(file);
   if (modal.customId && typeof modal.execute === "function") {
     client.modals.set(modal.customId, modal);
-    console.log(`✅ Loaded modal: ${modal.customId}`);
+    console.log(`Loaded modal: ${modal.customId}`);
   }
 }
 

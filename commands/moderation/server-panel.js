@@ -17,8 +17,13 @@ module.exports = {
     .setDescription("view server statistics and other server controls!."),
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
-      return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+     return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }

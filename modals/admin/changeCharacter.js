@@ -15,9 +15,13 @@ module.exports = {
 
     // Cek apakah nama baru sama dengan nama lama
     if (currentName === newName) {
-      return interaction.reply({
-        content:
-          "Nama karakter baru tidak boleh sama dengan nama karakter saat ini.",
+       return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Retry Failed")
+            .setDescription("Nama karakter baru tidak boleh sama dengan nama karakter saat ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -30,7 +34,12 @@ module.exports = {
 
     if (currentResult.length === 0) {
       return interaction.reply({
-        content: "Nama karakter tidak ditemukan.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Data not found")
+            .setDescription("Nama karakter tidak ditemukan.")
+        ],
         ephemeral: true,
       });
     }
@@ -43,7 +52,12 @@ module.exports = {
 
     if (newNameResult.length > 0) {
       return interaction.reply({
-        content: "Nama karakter baru sudah digunakan. Silakan pilih nama lain.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Nama Sudah Digunakan")
+            .setDescription("Nama karakter baru sudah digunakan. Silakan pilih nama lain.")
+        ],
         ephemeral: true,
       });
     }
@@ -55,7 +69,12 @@ module.exports = {
     ]);
 
     await interaction.reply({
-      content: `Nama karakter berhasil diubah dari **${currentName}** menjadi **${newName}**!`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x00FF00)
+          .setTitle("Success")
+          .setDescription(`Nama karakter berhasil diubah dari **${currentName}** menjadi **${newName}**!`),
+      ],
       ephemeral: true,
     });
   },

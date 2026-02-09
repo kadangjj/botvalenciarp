@@ -2,6 +2,7 @@ const { EmbedBuilder } = require("discord.js");
 const { pool } = require("../../functions/database");
 const { getUserCharacters } = require("../../functions/dataFunction");
 const { sendAccountInfo } = require("../../functions/emailService");
+const e = require("cors");
 
 module.exports = {
   customId: "check_account",
@@ -16,7 +17,12 @@ module.exports = {
 
     if (userData.length === 0) {
       return interaction.editReply({
-        content: "Anda belum mendaftar. Silakan daftar terlebih dahulu.",
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Akun Tidak Terdaftar")
+            .setDescription("Anda belum mendaftar. Silakan daftar terlebih dahulu.")
+            .setColor(0xff0000)
+        ]
       });
     }
 
@@ -26,7 +32,12 @@ module.exports = {
 
     if (!email) {
       return interaction.editReply({
-        content: "Email tidak ditemukan di akun Anda. Silakan update email terlebih dahulu.",
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Email Tidak Ditemukan")
+            .setDescription("Email tidak ditemukan di akun Anda. Silakan update email terlebih dahulu.")
+            .setColor(0xff0000)
+        ]
       });
     }
 
@@ -41,7 +52,12 @@ module.exports = {
 
     if (!emailResult.success) {
       return interaction.editReply({
-        content: `❌ Gagal mengirim email: ${emailResult.error}`,
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Email Gagal Dikirim")
+            .setDescription(`Gagal mengirim email: ${emailResult.error}`)
+            .setColor(0xff0000)
+        ]
       });
     }
 
@@ -75,14 +91,24 @@ ${charList}
       
       // Reply di channel
       await interaction.editReply({
-        content: `✅ Informasi akun telah dikirim ke:\n📧 Email: **${email}**\n💬 DM Discord Anda`,
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Informasi Akun Telah Dikirim!")
+            .setDescription(`Informasi akun telah dikirim ke:\nEmail: **${email}**\nDM Discord Anda`)
+            .setColor("#00ff00")
+        ]
       });
     } catch (error) {
       console.error("Gagal mengirim DM:", error);
       
       // Jika gagal DM, tetap reply bahwa email terkirim
       await interaction.editReply({
-        content: `✅ Informasi akun telah dikirim ke email: **${email}**\n\n⚠️ Gagal mengirim DM. Pastikan Anda mengizinkan pesan dari bot server ini.`,
+        embeds: [
+          new EmbedBuilder()
+            .setTitle("Informasi Akun Telah Dikirim!")
+            .setDescription(`Informasi akun telah dikirim ke email: **${email}**\n\nGagal mengirim DM. Pastikan Anda mengizinkan pesan dari bot server ini.`)
+            .setColor("#ff0000")
+        ]
       });
     }
   },

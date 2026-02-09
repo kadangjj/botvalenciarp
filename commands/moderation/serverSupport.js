@@ -14,7 +14,12 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -29,8 +34,7 @@ module.exports = {
           name: "Important Notes",  // TAMBAHKAN INI
           value:
             "**🗑 Ucp Delete:**\n[-] Harap Konfirmasikan kembali bahwa ketika ucp sudah di delete, tidak dapat di Recover kembali.\n\n" +
-            "**🗑 Character Delete:**\n[-] Harap Konfirmasikan kembali bahwa ketika Character sudah di delete, tidak dapat di Recover kembali.\n\n" +
-            "**📖 Character Story**\n[-] Buat Character story character anda dengan benar\n[-] Masukkan nama character yang akan didaftarkan character story.",
+            "**🗑 Character Delete:**\n[-] Harap Konfirmasikan kembali bahwa ketika Character sudah di delete, tidak dapat di Recover kembali. ",
           inline: false,
       })
       .setFooter({
@@ -46,13 +50,9 @@ module.exports = {
         .setLabel("🗑 Ucp Delete")
         .setStyle(ButtonStyle.Danger),
       new ButtonBuilder()
-        .setCustomId("CharacterDetele")
+        .setCustomId("CharacterDelete")
         .setLabel("🗑 Character Delete")
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId("character_story")
-        .setLabel("📖 Character Story")
-        .setStyle(ButtonStyle.Primary)
+        .setStyle(ButtonStyle.Danger)
     );
 
     await interaction.reply({ embeds: [embed], components: [row] });

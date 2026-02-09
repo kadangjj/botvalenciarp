@@ -5,8 +5,13 @@ module.exports = {
   customId: "changeUCPModal",
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
-      return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+       return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -26,7 +31,12 @@ module.exports = {
     );
     if (currentResult.length === 0) {
       return interaction.reply({
-        content: "Nama UCP tidak ditemukan.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Data not found")
+            .setDescription("Nama UCP tidak ditemukan.")
+        ],
         ephemeral: true,
       });
     }
@@ -37,7 +47,12 @@ module.exports = {
     );
     if (newNameResult.length > 0) {
       return interaction.reply({
-        content: "Nama UCP baru sudah digunakan. Silakan pilih nama lain.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Nama Sudah Digunakan")
+            .setDescription("Nama UCP baru sudah digunakan. Silakan pilih nama lain.")
+        ],
         ephemeral: true,
       });
     }
@@ -68,7 +83,12 @@ module.exports = {
     }
 
     await interaction.reply({
-      content: `Nama UCP berhasil diubah dari **${currentName}** menjadi **${newName}**!`,
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x00FF00)
+          .setTitle("Success")
+          .setDescription(`Nama UCP berhasil diubah dari **${currentName}** menjadi **${newName}**!`),
+      ],
       ephemeral: true,
     });
   },

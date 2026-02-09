@@ -44,8 +44,13 @@ module.exports = {
   async execute(interaction) {
     // Check admin role
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
-      return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+     return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -57,8 +62,13 @@ module.exports = {
 
     // Check if at least one button is enabled
     if (!showDonate && !showReport && !showUnbanned) {
-      return interaction.reply({
-        content: "❌ Minimal satu button harus diaktifkan!",
+       return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Gagal Membuat Panel Tiket")
+            .setDescription("Minimal satu button harus diaktifkan!")
+        ],
         ephemeral: true,
       });
     }
@@ -125,13 +135,23 @@ module.exports = {
       if (showUnbanned) enabledButtons.push("UNBANNED");
 
       await interaction.reply({
-        content: `✅ Ticket panel berhasil dibuat di ${channel}\n📌 Button aktif: ${enabledButtons.join(", ")}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor("#00FF00")
+            .setTitle("Ticket Panel Created")
+            .setDescription(`Ticket panel berhasil dibuat di ${channel}\nButton aktif: ${enabledButtons.join(", ")}`),
+        ],
         ephemeral: true,
       });
     } catch (error) {
       console.error(error);
       await interaction.reply({
-        content: "❌ Gagal membuat ticket panel!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription("Gagal membuat ticket panel!"),
+        ],
         ephemeral: true,
       });
     }

@@ -5,6 +5,7 @@ const {
   ActionRowBuilder,
 } = require("discord.js");
 const { pool } = require("../../functions/database");
+const e = require("cors");
 
 module.exports = {
   customId: "character_story",
@@ -17,8 +18,12 @@ module.exports = {
 
     if (rows.length === 0) {
       return interaction.reply({
-        content:
-          "❌ Anda belum terdaftar di UCP. Silakan daftar terlebih dahulu.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akun Tidak Terdaftar")
+            .setDescription("Anda belum terdaftar di UCP. Silakan daftar terlebih dahulu."),
+        ],
         ephemeral: true,
       });
     }

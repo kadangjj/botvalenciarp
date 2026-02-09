@@ -7,7 +7,7 @@ const { pool } = require("../../functions/database");
 const { getUserCharacters } = require("../../functions/dataFunction");
 
 module.exports = {
-  customId: "CharacterDetele",
+  customId: "CharacterDelete",
   async execute(interaction) {
     const DiscordID = interaction.user.id;
 
@@ -18,7 +18,12 @@ module.exports = {
 
     if (userData.length === 0) {
       return interaction.reply({
-        content: "❌ Anda belum mendaftar. Silakan daftar terlebih dahulu.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Anda belum mendaftar")
+            .setDescription("Silakan daftar terlebih dahulu."),
+        ],
         ephemeral: true,
       });
     }
@@ -29,7 +34,12 @@ module.exports = {
 
     if (characters.length === 0) {
       return interaction.reply({
-        content: "❌ Anda belum memiliki karakter.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Anda belum memiliki karakter.")
+            .setDescription("Silakan buat karakter terlebih dahulu."),
+        ],
         ephemeral: true,
       });
     }

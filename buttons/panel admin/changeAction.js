@@ -10,12 +10,17 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
     const embed = new EmbedBuilder()
-      .setTitle("🔄 Change Data")
+      .setTitle("Change Data")
       .setDescription(
         "Pilih data yang ingin diubah:\n- **UCP** untuk mengganti nama akun.\n- **Character** untuk mengganti nama karakter."
       )

@@ -6,7 +6,12 @@ module.exports = {
   async execute(interaction) {
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -20,7 +25,12 @@ module.exports = {
 
       if (ucpData.length === 0) {
         return interaction.reply({
-          content: "Nama UCP tidak ditemukan di database.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Data not found")
+              .setDescription("Nama UCP tidak ditemukan di database.")
+          ],
           ephemeral: true,
         });
       }
@@ -47,13 +57,23 @@ module.exports = {
       }
 
       await interaction.reply({
-        content: `Berhasil menghapus UCP: **${ucpName}** beserta semua characternya.`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setTitle("Success")
+            .setDescription(`Berhasil menghapus UCP: **${ucpName}** beserta semua characternya.`),
+        ],
         ephemeral: true,
       });
     } catch (error) {
       console.error(error);
       await interaction.reply({
-        content: "Terjadi kesalahan saat menghapus UCP.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription("Terjadi kesalahan saat menghapus UCP."),
+        ],
         ephemeral: true,
       });
     }

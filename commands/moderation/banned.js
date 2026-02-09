@@ -35,8 +35,13 @@ module.exports = {
   async execute(interaction) {
     // Check admin role
     if (!interaction.member.roles.cache.has(config.roles.adminRole)) {
-      return interaction.reply({
-        content: "❌ Anda tidak memiliki izin!",
+       return interaction.reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Akses Ditolak")
+            .setDescription("Anda tidak memiliki izin untuk mengakses fitur ini!")
+        ],
         ephemeral: true,
       });
     }
@@ -60,7 +65,12 @@ module.exports = {
       if (playerRows.length === 0) {
         await conn.end();
         return interaction.editReply({
-          content: `❌ **Error:** Player \`${playerName}\` tidak ditemukan!`,
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Error")
+              .setDescription(`Player \`${playerName}\` tidak ditemukan!`),
+          ],
         });
       }
 
@@ -74,7 +84,12 @@ module.exports = {
       if (banCheck.length > 0) {
         await conn.end();
         return interaction.editReply({
-          content: `❌ **Error:** Player \`${playerName}\` sudah ter-ban!`,
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setTitle("Error")
+              .setDescription(`Player \`${playerName}\` telah di banned!`),
+          ],
         });
       }
 
@@ -114,18 +129,18 @@ module.exports = {
       // Success embed
       const embed = new EmbedBuilder()
         .setColor("#FF0000")
-        .setTitle("🔨 Player Banned")
+        .setTitle("Player Banned")
         .addFields(
           {
             name: "👤 Player Name",
             value: `\`${playerName}\``,
             inline: true,
           },
-          { name: "🌐 IP Address", value: `\`${playerIP}\``, inline: true },
-          { name: "⏱️ Duration", value: expireText, inline: true },
-          { name: "📝 Reason", value: `\`${banReason}\``, inline: false },
-          { name: "👮 Banned By", value: `${discordUser}`, inline: true },
-          { name: "📅 Ban Date", value: `<t:${banDate}:F>`, inline: true }
+          { name: "IP Address", value: `\`${playerIP}\``, inline: true },
+          { name: "Duration", value: expireText, inline: true },
+          { name: "Reason", value: `\`${banReason}\``, inline: false },
+          { name: "Banned By", value: `${discordUser}`, inline: true },
+          { name: "Ban Date", value: `<t:${banDate}:F>`, inline: true }
         )
         .setTimestamp()
         .setFooter({
@@ -137,7 +152,12 @@ module.exports = {
     } catch (error) {
       console.error("Ban command error:", error);
       await interaction.editReply({
-        content: `❌ **Error:** ${error.message}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Error")
+            .setDescription(`**Error:** ${error.message}`),
+        ],
       });
     }
   },
