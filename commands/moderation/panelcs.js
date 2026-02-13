@@ -26,35 +26,31 @@ module.exports = {
     }
 
     const embed = new EmbedBuilder()
-      .setTitle("📖 Character Story Panel")
+      .setAuthor({
+        name: "Valencia Roleplay",
+        iconURL: "https://cdn.discordapp.com/attachments/1330494882778845301/1443922699033514034/20251128_181111.jpg?ex=692ad54e&is=692983ce&hm=53bb27e9c56bcb51e1fcf74d246d3f9aab58bd59f86902c557608c63df55284f&"
+      })
       .setDescription(
-        "**Character Story Registration**\n" +
-        "Buat latar belakang karakter Anda dengan mengikuti panduan yang telah ditentukan."
-      )
-      .setColor("#0D6EFD")
-      .addFields({
-        name: "Syarat Character Story",
-        value:
-          "• **Level minimal 3**\n" +
-          "• Minimal **200 kata** dan **3 paragraf**\n" +
-          "• Menggunakan **bahasa formal (EYD)**\n" +
-          "• Sudut pandang **orang ketiga**\n" +
-          "• Tidak mengandung **OOC/nama terkenal**\n" +
-          "• **Realistis** sesuai roleplay GTA SAMP",
-        inline: false,
-      })
-      .addFields({
-        name: "Penting",
-        value:
-          "• Pastikan nama karakter yang diinput **benar dan milik Anda**\n" +
-          "• Story akan **divalidasi otomatis** oleh sistem\n" +
-          "• Jika ditolak, Anda bisa **mengajukan ulang**",
-        inline: false,
-      })
+        "## Character Story Panel\n\n" +
+        "Buat latar belakang karakter Anda dengan mengikuti panduan yang telah ditentukan.\n\n" +
+        "---\n\n" +
+        "### 📋 **Syarat Character Story**\n\n" +
+        "• **Level minimal 3**\n" +
+        "• Minimal **200 kata** dan **3 paragraf**\n" +
+        "• Menggunakan **bahasa formal (EYD)**\n" +
+        "• Sudut pandang **orang ketiga**\n" +
+        "• Tidak mengandung **OOC/nama terkenal**\n" +
+        "• **Realistis** sesuai roleplay GTA SAMP\n\n" +
+        "\n\n" +
+        "### ⚠️ **Penting**\n\n" +
+        "• Pastikan nama karakter yang diinput **benar dan milik Anda**\n" +
+        "• Story akan **divalidasi otomatis** oleh sistem\n" +
+        "• Jika ditolak, Anda bisa **mengajukan ulang**\n\n" 
+          )
+      .setColor("#5865F2")
       .setFooter({
-        text: "Character story anda otomatis divalidasi oleh sistem | Valencia Roleplay - Still High",
-        iconURL:
-          "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg?ex=692bc8a4&is=692a7724&hm=845e78348ccf3761a0aac224cf4061752c697f93d5d61b0f3f197ca11b4f859d&",
+        text: "Character story Anda otomatis divalidasi oleh sistem Valencia Roleplay",
+        iconURL: "https://cdn.discordapp.com/attachments/1330494882778845301/1443922699033514034/20251128_181111.jpg?ex=692ad54e&is=692983ce&hm=53bb27e9c56bcb51e1fcf74d246d3f9aab58bd59f86902c557608c63df55284f&",
       })
       .setTimestamp();
 

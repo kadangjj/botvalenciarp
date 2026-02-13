@@ -1,395 +1,470 @@
 // ============================================
-// FILE: commands/moderation/urlbb.js (FULLY AUTOMATED)
+// FILE: commands/moderation/urlbb.js
 // ============================================
 const { SlashCommandBuilder, EmbedBuilder } = require("discord.js");
-const ytdl = require("@distube/ytdl-core");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
 const FormData = require("form-data");
-const { exec } = require("child_process");
-const { promisify } = require("util");
 
-const execPromise = promisify(exec);
+// Load config
+const config = require("../../config.json");
+const RAPIDAPI_KEY = config.rapidapi_key;
+if (!RAPIDAPI_KEY) throw new Error("RAPIDAPI_KEY missing in config.json");
+
+const TEMP_DIR = path.join(__dirname, "../../temp");
+if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("urlbb")
-    .setDescription("Auto convert YouTube to audio URL for SAMP Boombox")
+    .setDescription("Auto convert YouTube/Spotify/TikTok to audio URL for SAMP Boombox")
     .addStringOption((option) =>
-      option
-        .setName("url")
-        .setDescription("YouTube video URL")
-        .setRequired(true)
+      option.setName("url").setDescription("YouTube/Spotify/TikTok URL").setRequired(true)
     ),
-  async execute(interaction) {
-    const videoUrl = interaction.options.getString("url");
 
-    if (!videoUrl.includes("youtube.com") && !videoUrl.includes("youtu.be")) {
+  async execute(interaction) {
+    const inputUrl = interaction.options.getString("url");
+
+    // Detect platform
+    let platform = null;
+    if (inputUrl.includes("youtube.com") || inputUrl.includes("youtu.be")) {
+      platform = "youtube";
+    } else if (inputUrl.includes("spotify.com")) {
+      platform = "spotify";
+    } else if (inputUrl.includes("tiktok.com")) {
+      platform = "tiktok";
+    } else {
       return interaction.reply({
-        content: "❌ URL YouTube tidak valid.",
-        ephemeral: true,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xff0000)
+            .setDescription("URL tidak valid. Gunakan YouTube, Spotify, atau TikTok URL.")
+        ], ephemeral: true
       });
     }
 
     await interaction.deferReply();
-
-    const tempDir = path.join(__dirname, "../../temp");
-    if (!fs.existsSync(tempDir)) {
-      fs.mkdirSync(tempDir, { recursive: true });
-    }
-
     const timestamp = Date.now();
-    let filePath = null;
+    const tempFile = path.join(TEMP_DIR, `audio_${timestamp}.mp3`);
 
     try {
-      // Step 1: Validate & Get Info
+      let downloadUrl, title, thumbnail, sourceUrl;
+
+      // Step 1: Get download link based on platform
       const embed1 = new EmbedBuilder()
         .setColor("#FF0000")
-        .setTitle("⏳ Step 1/4: Getting video info...")
+        .setTitle(`Step 1/3: Getting ${platform.toUpperCase()} download link...`)
         .setTimestamp();
-
       await interaction.editReply({ embeds: [embed1] });
 
-      if (!ytdl.validateURL(videoUrl)) {
-        return interaction.editReply({
-          content: "❌ URL YouTube tidak valid!",
-        });
+      if (platform === "youtube") {
+        const result = await getYouTubeAudio(inputUrl, RAPIDAPI_KEY);
+        downloadUrl = result.downloadUrl;
+        title = result.title;
+        thumbnail = result.thumbnail;
+        sourceUrl = result.sourceUrl;
+      } else if (platform === "spotify") {
+        const result = await getSpotifyAudio(inputUrl, RAPIDAPI_KEY);
+        downloadUrl = result.downloadUrl;
+        title = result.title;
+        thumbnail = result.thumbnail;
+        sourceUrl = result.sourceUrl;
+      } else if (platform === "tiktok") {
+        const result = await getTikTokAudio(inputUrl, RAPIDAPI_KEY);
+        downloadUrl = result.downloadUrl;
+        title = result.title;
+        thumbnail = result.thumbnail;
+        sourceUrl = result.sourceUrl;
       }
 
-      const info = await ytdl.getInfo(videoUrl);
-      const title = info.videoDetails.title;
-      const author = info.videoDetails.author.name;
-      const duration = parseInt(info.videoDetails.lengthSeconds);
-      const thumbnail = info.videoDetails.thumbnails[0].url;
-      const videoId = info.videoDetails.videoId;
+      console.log(`[URLBB] ${platform} Download URL:`, downloadUrl);
+      console.log(`[URLBB] ${platform} Title:`, title);
 
-      // Check duration (max 10 minutes)
-      if (duration > 600) {
-        return interaction.editReply({
-          content: "❌ Video terlalu panjang! Maksimal 10 menit.",
-        });
-      }
-
-      // Step 2: Download Audio
+      // Step 2: Download audio file
       const embed2 = new EmbedBuilder()
         .setColor("#FFA500")
-        .setTitle("⏳ Step 2/4: Downloading audio...")
+        .setTitle("Step 2/3: Downloading audio...")
         .setDescription(`**Title:** ${title}`)
         .setTimestamp();
-
       await interaction.editReply({ embeds: [embed2] });
 
-      filePath = path.join(tempDir, `audio_${timestamp}.webm`);
-
-      // Download with ytdl-core
-      const audioStream = ytdl(videoUrl, {
-        quality: "highestaudio",
-        filter: "audioonly",
-      });
-
-      const writeStream = fs.createWriteStream(filePath);
-      audioStream.pipe(writeStream);
-
-      await new Promise((resolve, reject) => {
-        writeStream.on("finish", resolve);
-        writeStream.on("error", reject);
-        audioStream.on("error", reject);
-
-        // Timeout 2 minutes
-        setTimeout(() => {
-          writeStream.destroy();
-          reject(new Error("Download timeout"));
-        }, 120000);
-      });
+      await downloadFile(downloadUrl, tempFile);
 
       // Verify file
-      if (!fs.existsSync(filePath) || fs.statSync(filePath).size < 1000) {
-        throw new Error("Download failed or file corrupted");
+      if (!fs.existsSync(tempFile) || fs.statSync(tempFile).size === 0) {
+        throw new Error("File audio kosong atau gagal didownload");
       }
 
-      // Step 3: Convert to MP3 (if ffmpeg available)
+      const fileSize = fs.statSync(tempFile).size;
+      console.log("[URLBB] Audio file size:", fileSize, "bytes");
+
+      // Step 3: Upload to file host
       const embed3 = new EmbedBuilder()
         .setColor("#FFA500")
-        .setTitle("⏳ Step 3/4: Processing audio...")
+        .setTitle("Step 3/3: Uploading audio...")
+        .setDescription("Uploading to file hosting service...")
         .setTimestamp();
-
       await interaction.editReply({ embeds: [embed3] });
 
-      // Try convert to MP3 with ffmpeg
-      const mp3Path = path.join(tempDir, `audio_${timestamp}.mp3`);
-      let finalPath = filePath;
+      let uploadUrl = await uploadFallback(tempFile);
+      if (!uploadUrl) throw new Error("Upload gagal ke semua service");
 
-      try {
-        // Check if ffmpeg exists
-        await execPromise("ffmpeg -version");
-
-        // Convert to MP3
-        await execPromise(
-          `ffmpeg -i "${filePath}" -vn -ar 44100 -ac 2 -b:a 128k "${mp3Path}"`
-        );
-
-        // Use MP3 if conversion successful
-        if (fs.existsSync(mp3Path) && fs.statSync(mp3Path).size > 1000) {
-          fs.unlinkSync(filePath); // Delete webm
-          finalPath = mp3Path;
-        }
-      } catch (ffmpegError) {
-        console.log("FFmpeg not available, using webm");
-      }
-
-      // Check file size
-      const stats = fs.statSync(finalPath);
-      const fileSizeMB = stats.size / (1024 * 1024);
-
-      if (fileSizeMB > 100) {
-        fs.unlinkSync(finalPath);
-        return interaction.editReply({
-          content: "❌ File terlalu besar! Maksimal 100MB.",
-        });
-      }
-
-      // Step 4: Upload to multiple services
-      const embed4 = new EmbedBuilder()
-        .setColor("#FFA500")
-        .setTitle("⏳ Step 4/4: Uploading...")
-        .setDescription(`**File size:** ${fileSizeMB.toFixed(2)} MB`)
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed4] });
-
-      const uploadUrl = await uploadFile(finalPath);
-
-      // Cleanup
-      fs.unlinkSync(finalPath);
-
-      if (!uploadUrl) {
-        return interaction.editReply({
-          content:
-            "❌ Upload gagal ke semua service! Coba lagi atau gunakan `/radio`",
-        });
-      }
-
-      // Success!
-      const embed5 = new EmbedBuilder()
+      const embedSuccess = new EmbedBuilder()
         .setColor("#00FF00")
-        .setTitle("✅ SAMP Boombox URL Ready!")
-        .setDescription("Audio berhasil diupload!")
+        .setTitle("SAMP Boombox URL Ready!")
+        .setDescription(`Audio berhasil diupload dari ${platform.toUpperCase()}!`)
         .addFields(
+          { name: "Title", value: title.substring(0, 256), inline: false },
+          { name: "Source", value: `[Open ${platform.toUpperCase()}](${sourceUrl})`, inline: false },
+          { name: "File Size", value: `${(fileSize / 1024 / 1024).toFixed(2)} MB`, inline: true },
           {
-            name: "🎬 Video Title",
-            value: title.substring(0, 256),
+            name: "Audio URL",
+            value: uploadUrl.length > 1000 ? "Check message below" : `${uploadUrl}`,
             inline: false,
           },
-          {
-            name: "👤 Channel",
-            value: author.substring(0, 256),
-            inline: true,
-          },
-          {
-            name: "⏱️ Duration",
-            value: `${Math.floor(duration / 60)}:${(duration % 60)
-              .toString()
-              .padStart(2, "0")}`,
-            inline: true,
-          },
-          {
-            name: "📊 File Size",
-            value: `${fileSizeMB.toFixed(2)} MB`,
-            inline: true,
-          },
-          {
-            name: "📺 YouTube Source",
-            value: `[Open Video](${videoUrl})`,
-            inline: false,
-          },
-          {
-            name: "🔗 Audio URL",
-            value:
-              uploadUrl.length > 1000
-                ? "Check message below"
-                : `\`\`\`${uploadUrl}\`\`\``,
-            inline: false,
-          },
-          {
-            name: "📝 How to Use in SAMP",
-            value: "```/boombox [paste URL above]```",
-            inline: false,
-          }
+          { name: "How to Use in SAMP", value: "```/setbb > custom url [paste URL above]```", inline: false }
         )
         .setThumbnail(thumbnail)
-        .setFooter({
-          text: "Valencia Roleplay • Fully Automated",
-          iconURL: interaction.guild.iconURL(),
-        })
+        .setFooter({ text: "Valencia Roleplay • Fully Automated" })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed5] });
+      await interaction.editReply({ embeds: [embedSuccess] });
+      //await interaction.followUp({ content: `**Audio URL for SAMP:**\n${uploadUrl}` });
 
-      await interaction.followUp({
-        content: `**🔗 Audio URL for SAMP:**\n${uploadUrl}`,
-        ephemeral: false,
-      });
-    } catch (error) {
-      console.error("[URLBB Error]", error);
+      // Cleanup
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+    } catch (err) {
+      console.error("[URLBB Error]", err);
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
 
-      // Cleanup on error
-      try {
-        if (filePath && fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-        // Clean temp dir
-        const files = fs.readdirSync(tempDir);
-        files.forEach((file) => {
-          const fp = path.join(tempDir, file);
-          if (Date.now() - fs.statSync(fp).mtimeMs > 3600000) {
-            // Delete files older than 1 hour
-            fs.unlinkSync(fp);
-          }
-        });
-      } catch (cleanupErr) {}
-
-      // User-friendly error
-      let errorMsg = "Terjadi kesalahan saat memproses video.";
-
-      if (error.message.includes("Sign in")) {
-        errorMsg = "Video ini memerlukan login! Coba video lain.";
-      } else if (error.message.includes("private")) {
-        errorMsg = "Video ini private atau tidak tersedia!";
-      } else if (error.message.includes("copyright")) {
-        errorMsg = "Video ini memiliki copyright issue!";
-      } else if (error.message.includes("timeout")) {
-        errorMsg = "Download timeout! Coba lagi atau pilih video lebih pendek.";
-      } else if (error.message.includes("decipher")) {
-        errorMsg =
-          "YouTube sedang update sistem! Gunakan `/radio` untuk instant access.";
+      let errorMsg = err.message;
+      if (err.response?.status === 404) {
+        errorMsg = "Content tidak ditemukan atau tidak dapat diakses.";
+      } else if (err.response?.status === 429) {
+        errorMsg = "Rate limit exceeded. Coba lagi dalam beberapa menit.";
+      } else if (err.response?.status === 403) {
+        errorMsg = "API key tidak valid.";
+      } else if (err.response?.status === 400) {
+        errorMsg = "URL tidak valid atau content tidak didukung.";
       }
 
       await interaction.editReply({
-        content: `❌ **${errorMsg}**\n\n*Alternatif: Ketik \`/radio\` untuk radio stream yang always work!*`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setTitle("Gagal Mendapatkan Audio URL")
+            .setDescription(`Terjadi kesalahan: ${errorMsg}\n\n**Kemungkinan penyebab:**\n- Content age-restricted, private, atau region-locked\n- API quota habis\n- Format tidak didukung`),
+        ],
       });
     }
   },
 };
 
-// Upload to multiple services with fallback
-async function uploadFile(filePath) {
+// ----------------------
+// Platform-specific Functions
+// ----------------------
+
+async function getYouTubeAudio(url, apiKey) {
+  try {
+    const videoId = extractVideoId(url);
+    if (!videoId) {
+      throw new Error("Tidak dapat mengekstrak Video ID dari URL");
+    }
+
+    console.log("[URLBB] Video ID:", videoId);
+
+    const response = await axios.get(
+      "https://yt-search-and-download-mp3.p.rapidapi.com/mp3",
+      {
+        params: { url: url },
+        headers: {
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": "yt-search-and-download-mp3.p.rapidapi.com",
+        },
+        timeout: 120000,
+      }
+    );
+
+    console.log("[URLBB] YouTube API Response:", JSON.stringify(response.data));
+
+    if (!response.data) {
+      throw new Error("Tidak ada response dari API");
+    }
+
+    const data = response.data;
+    const downloadUrl = data.download || data.downloadUrl || data.url || data.link;
+    const title = data.title || data.name || videoId;
+    const thumbnail = data.thumbnail || data.thumb || null;
+
+    if (!downloadUrl) {
+      throw new Error("Download URL tidak ditemukan");
+    }
+
+    return {
+      downloadUrl,
+      title,
+      thumbnail,
+      sourceUrl: `https://youtube.com/watch?v=${videoId}`
+    };
+  } catch (err) {
+    console.error("[URLBB] YouTube error:", err.message);
+    throw new Error("Gagal mendapatkan audio dari YouTube: " + err.message);
+  }
+}
+
+async function getSpotifyAudio(url, apiKey) {
+  try {
+    const response = await axios.get(
+      "https://spotify-downloader9.p.rapidapi.com/downloadSong",
+      {
+        params: { songId: url },
+        headers: {
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": "spotify-downloader9.p.rapidapi.com",
+        },
+        timeout: 120000,
+      }
+    );
+
+    console.log("[URLBB] Spotify API Response:", JSON.stringify(response.data));
+
+    const data = response.data;
+    const downloadUrl = data.data?.downloadLink || data.downloadLink || data.url || data.link;
+    const title = data.data?.title || data.title || data.data?.name || "Spotify Track";
+    const thumbnail = data.data?.image || data.image || data.thumbnail || data.data?.cover || null;
+
+    if (!downloadUrl) {
+      throw new Error("Download URL tidak ditemukan dari Spotify");
+    }
+
+    return {
+      downloadUrl,
+      title,
+      thumbnail,
+      sourceUrl: url
+    };
+  } catch (err) {
+    console.error("[URLBB] Spotify error:", err.message);
+    throw new Error("Gagal mendapatkan audio dari Spotify: " + err.message);
+  }
+}
+
+async function getTikTokAudio(url, apiKey) {
+  try {
+    const response = await axios.get(
+      "https://tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com/rich_response/index",
+      {
+        params: { url: url },
+        headers: {
+          "x-rapidapi-key": apiKey,
+          "x-rapidapi-host": "tiktok-downloader-download-tiktok-videos-without-watermark.p.rapidapi.com",
+        },
+        timeout: 120000,
+      }
+    );
+
+    console.log("[URLBB] TikTok API Response:", JSON.stringify(response.data));
+
+    const data = response.data;
+
+    // TikTok API mengembalikan array, ambil element pertama
+    let downloadUrl = data.music;
+    let title = data.description || "TikTok Audio";
+    let thumbnail = data.cover;
+
+    // Pastikan kita ekstrak string dari array
+    if (Array.isArray(downloadUrl)) downloadUrl = downloadUrl[0];
+    if (Array.isArray(title)) title = title[0];
+    if (Array.isArray(thumbnail)) thumbnail = thumbnail[0];
+
+    // Fallback jika title kosong
+    if (!title || title === "") {
+      title = `TikTok Audio by ${Array.isArray(data.author) ? data.author[0] : data.author || "Unknown"}`;
+    }
+
+    if (!downloadUrl) {
+      throw new Error("Download URL tidak ditemukan dari TikTok");
+    }
+
+    return {
+      downloadUrl,
+      title,
+      thumbnail,
+      sourceUrl: url
+    };
+  } catch (err) {
+    console.error("[URLBB] TikTok error:", err.message);
+    throw new Error("Gagal mendapatkan audio dari TikTok: " + err.message);
+  }
+}
+
+// ----------------------
+// Helper Functions
+// ----------------------
+
+function extractVideoId(url) {
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+async function downloadFile(url, outputPath) {
+  try {
+    console.log("[URLBB] Downloading from:", url);
+
+    const response = await axios.get(url, {
+      responseType: "stream",
+      timeout: 180000, // 3 minutes
+      maxRedirects: 5,
+    });
+
+    const writer = fs.createWriteStream(outputPath);
+    response.data.pipe(writer);
+
+    return new Promise((resolve, reject) => {
+      writer.on("finish", () => {
+        console.log("[URLBB] File downloaded successfully");
+        resolve(outputPath);
+      });
+      writer.on("error", (err) => {
+        console.error("[URLBB] Download write error:", err);
+        reject(err);
+      });
+    });
+  } catch (err) {
+    console.error("[URLBB] Download file error:", err.message);
+    throw new Error("Gagal download file: " + err.message);
+  }
+}
+
+async function uploadFallback(filePath) {
+  console.log("[URLBB] Trying file uploaders...");
+
   const uploaders = [
-    // Uploader 1: Catbox.moe (most reliable)
+    // Top4Top - Primary uploader
     async () => {
       try {
-        console.log("Trying Catbox.moe...");
+        console.log("[URLBB] Trying Top4Top...");
+        const form = new FormData();
+        form.append("file_1_", fs.createReadStream(filePath));
+        form.append("submitr", "[ رفع الملفات ]");
+
+        const res = await axios.post("https://top4top.io/index.php", form, {
+          headers: {
+            ...form.getHeaders(),
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          },
+          timeout: 180000,
+          maxBodyLength: Infinity,
+          maxContentLength: Infinity,
+        });
+
+        console.log("[URLBB] Top4Top response length:", res.data.length);
+
+        // Extract URL dari HTML response
+        const urlMatch = res.data.match(/https?:\/\/[a-z0-9]+\.top4top\.io\/[^\s"'<>]+/i);
+        if (urlMatch && urlMatch[0]) {
+          const url = urlMatch[0];
+          console.log("[URLBB] Top4Top success:", url);
+          return url;
+        }
+
+        // Alternatif pattern
+        const altMatch = res.data.match(/https?:\/\/top4top\.io\/downloadf-[^\s"'<>]+/i);
+        if (altMatch && altMatch[0]) {
+          console.log("[URLBB] Top4Top success (alt):", altMatch[0]);
+          return altMatch[0];
+        }
+
+        console.log("[URLBB] Top4Top: No URL found in response");
+      } catch (err) {
+        console.error("[URLBB] Top4Top failed:", err.message);
+      }
+      return null;
+    },
+
+    // Catbox.moe - Backup
+    async () => {
+      try {
+        console.log("[URLBB] Trying Catbox...");
         const form = new FormData();
         form.append("reqtype", "fileupload");
         form.append("fileToUpload", fs.createReadStream(filePath));
-
-        const response = await axios.post(
-          "https://catbox.moe/user/api.php",
-          form,
-          {
-            headers: {
-              ...form.getHeaders(),
-            },
-            timeout: 180000,
-          }
-        );
-
-        if (response.data && response.data.includes("https://")) {
-          console.log("✅ Catbox success");
-          return response.data.trim();
+        const res = await axios.post("https://catbox.moe/user/api.php", form, {
+          headers: { ...form.getHeaders() },
+          timeout: 180000,
+          maxBodyLength: Infinity,
+        });
+        if (res.data && typeof res.data === "string" && res.data.includes("https://")) {
+          console.log("[URLBB] Catbox success:", res.data.trim());
+          return res.data.trim();
         }
       } catch (err) {
-        console.log("❌ Catbox failed:", err.message);
+        console.error("[URLBB] Catbox failed:", err.message);
       }
       return null;
     },
 
-    // Uploader 2: File.io
+    // File.io - Backup 2
     async () => {
       try {
-        console.log("Trying File.io...");
+        console.log("[URLBB] Trying File.io...");
         const form = new FormData();
         form.append("file", fs.createReadStream(filePath));
-
-        const response = await axios.post("https://file.io", form, {
-          headers: {
-            ...form.getHeaders(),
-          },
+        const res = await axios.post("https://file.io", form, {
+          headers: { ...form.getHeaders() },
           timeout: 180000,
+          maxBodyLength: Infinity,
         });
-
-        if (response.data && response.data.success && response.data.link) {
-          console.log("✅ File.io success");
-          return response.data.link;
+        if (res.data?.success && res.data?.link) {
+          console.log("[URLBB] File.io success:", res.data.link);
+          return res.data.link;
         }
       } catch (err) {
-        console.log("❌ File.io failed:", err.message);
+        console.error("[URLBB] File.io failed:", err.message);
       }
       return null;
     },
 
-    // Uploader 3: 0x0.st
+    // Uguu.se - Backup 3
     async () => {
       try {
-        console.log("Trying 0x0.st...");
+        console.log("[URLBB] Trying Uguu.se...");
         const form = new FormData();
-        form.append("file", fs.createReadStream(filePath));
-
-        const response = await axios.post("https://0x0.st", form, {
-          headers: {
-            ...form.getHeaders(),
-          },
+        form.append("files[]", fs.createReadStream(filePath));
+        const res = await axios.post("https://uguu.se/upload", form, {
+          headers: { ...form.getHeaders() },
           timeout: 180000,
+          maxBodyLength: Infinity,
         });
-
-        if (response.data && response.data.includes("https://")) {
-          console.log("✅ 0x0.st success");
-          return response.data.trim();
+        if (res.data?.success && res.data?.files?.[0]?.url) {
+          console.log("[URLBB] Uguu.se success:", res.data.files[0].url);
+          return res.data.files[0].url;
         }
       } catch (err) {
-        console.log("❌ 0x0.st failed:", err.message);
-      }
-      return null;
-    },
-
-    // Uploader 4: Litterbox (temporary 1 hour)
-    async () => {
-      try {
-        console.log("Trying Litterbox...");
-        const form = new FormData();
-        form.append("reqtype", "fileupload");
-        form.append("time", "1h");
-        form.append("fileToUpload", fs.createReadStream(filePath));
-
-        const response = await axios.post(
-          "https://litterbox.catbox.moe/resources/internals/api.php",
-          form,
-          {
-            headers: {
-              ...form.getHeaders(),
-            },
-            timeout: 180000,
-          }
-        );
-
-        if (response.data && response.data.includes("https://")) {
-          console.log("✅ Litterbox success (1 hour expiry)");
-          return response.data.trim();
-        }
-      } catch (err) {
-        console.log("❌ Litterbox failed:", err.message);
+        console.error("[URLBB] Uguu.se failed:", err.message);
       }
       return null;
     },
   ];
 
-  // Try each uploader
   for (const uploader of uploaders) {
     const url = await uploader();
-    if (url) {
-      return url;
-    }
+    if (url) return url;
   }
 
+  console.error("[URLBB] All uploaders failed");
   return null;
 }

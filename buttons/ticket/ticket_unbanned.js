@@ -28,7 +28,11 @@ module.exports = {
 
     if (existingTicket) {
       return interaction.editReply({
-        content: `❌ Anda sudah memiliki ticket UNBANNED yang aktif di ${existingTicket}!`,
+         embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription(`Anda sudah memiliki ticket UNBANNED yang aktif di ${existingTicket}!`),
+        ],
       });
     }
 
@@ -67,7 +71,7 @@ module.exports = {
       // Welcome embed
       const welcomeEmbed = new EmbedBuilder()
         .setColor("#5865F2")
-        .setTitle("😎 TICKET REQUEST UNBANNED")
+        .setTitle("TICKET REQUEST UNBANNED")
         .setDescription(
           `Halo ${member}!\n\n` +
           "Anda membuat permohonan unbanned akun.\n\n" +
@@ -76,7 +80,7 @@ module.exports = {
           "• Alasan banned\n" +
           "• Alasan mengapa harus di-unbanned\n" +
           "• Janji tidak akan mengulangi pelanggaran\n\n" +
-          "⚠️ **PENTING:** Permohonan unbanned akan dipertimbangkan berdasarkan:\n" +
+          "⚠️ **PENTING** Permohonan unbanned akan dipertimbangkan berdasarkan:\n" +
           "• Jenis pelanggaran\n" +
           "• Riwayat player\n" +
           "• Bukti perubahan sikap\n\n" +
@@ -102,7 +106,11 @@ module.exports = {
       });
 
       await interaction.editReply({
-        content: `✅ Ticket UNBANNED berhasil dibuat! ${ticketChannel}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setDescription(`Ticket UNBANNED berhasil dibuat! ${ticketChannel}`),
+        ],
       });
 
       // LOG: Send to log channel
@@ -110,7 +118,7 @@ module.exports = {
       if (logChannel) {
         const logEmbed = new EmbedBuilder()
           .setColor("#5865F2")
-          .setTitle("📂 TICKET OPENED")
+          .setTitle("TICKET OPENED")
           .setDescription(`**Type:** REQ UNBANNED\n**Channel:** ${ticketChannel}\n**User:** ${member}`)
           .addFields(
             { name: "User ID", value: member.id, inline: true },
@@ -127,7 +135,11 @@ module.exports = {
     } catch (error) {
       console.error("❌ Error creating unbanned ticket:", error);
       await interaction.editReply({
-        content: "❌ Terjadi kesalahan saat membuat ticket!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription("Terjadi kesalahan saat membuat ticket!"),
+        ],
       });
     }
   },

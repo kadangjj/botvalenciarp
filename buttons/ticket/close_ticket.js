@@ -21,7 +21,11 @@ module.exports = {
         !channel.name.startsWith("report-") && 
         !channel.name.startsWith("unbanned-")) {
       return interaction.reply({
-        content: "❌ Command ini hanya bisa digunakan di ticket channel!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription("Command ini hanya bisa digunakan di ticket channel!"),
+        ],
         ephemeral: true,
       });
     }
@@ -33,7 +37,11 @@ module.exports = {
 
     if (!isAdmin && !isOwner) {
       return interaction.reply({
-        content: "❌ Anda tidak memiliki izin untuk menutup ticket ini!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription("Anda tidak memiliki izin untuk menutup ticket ini!"),
+        ],
         ephemeral: true,
       });
     }
@@ -41,11 +49,11 @@ module.exports = {
     // Confirmation embed
     const confirmEmbed = new EmbedBuilder()
       .setColor("#FF0000")
-      .setTitle("⚠️ Konfirmasi Penutupan Ticket")
+      .setTitle("Konfirmasi Penutupan Ticket")
       .setDescription(
         "Apakah Anda yakin ingin menutup ticket ini?\n\n" +
-        "✅ Transcript akan disimpan di log channel\n" +
-        "🗑️ Channel akan dihapus dalam **5 detik** setelah konfirmasi."
+        "Transcript akan disimpan di log channel\n" +
+        "Channel akan dihapus dalam **5 detik** setelah konfirmasi."
       )
       .setTimestamp();
 
@@ -75,7 +83,11 @@ module.exports = {
     collector.on("collect", async (i) => {
       if (i.user.id !== interaction.user.id) {
         return i.reply({
-          content: "❌ Ini bukan untuk Anda!",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setDescription("Ini bukan untuk Anda!"),
+          ],
           ephemeral: true,
         });
       }
@@ -86,8 +98,8 @@ module.exports = {
           .setTitle("🔒 Ticket Ditutup")
           .setDescription(
             `Ticket ditutup oleh ${interaction.user}\n\n` +
-            "📝 Menyimpan transcript...\n" +
-            "🗑️ Channel akan dihapus dalam **5 detik**..."
+            "Menyimpan transcript...\n" +
+            "Channel akan dihapus dalam **5 detik**..."
           )
           .setTimestamp();
 
@@ -130,7 +142,7 @@ module.exports = {
           if (logChannel) {
             const logEmbed = new EmbedBuilder()
               .setColor(ticketColor)
-              .setTitle("🔒 TICKET CLOSED")
+              .setTitle("TICKET CLOSED")
               .setDescription(
                 `**Type:** ${ticketType}\n` +
                 `**Channel:** ${channel.name}\n` +
@@ -171,8 +183,11 @@ module.exports = {
 
       } else if (i.customId === "cancel_close_ticket") {
         await i.update({
-          content: "❌ Penutupan ticket dibatalkan.",
-          embeds: [],
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setDescription("Penutupan ticket dibatalkan."),
+          ],
           components: [],
         });
       }
@@ -183,8 +198,11 @@ module.exports = {
     collector.on("end", (collected) => {
       if (collected.size === 0) {
         interaction.editReply({
-          content: "⏱️ Waktu konfirmasi habis. Silakan coba lagi.",
-          embeds: [],
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setDescription("⏱Waktu konfirmasi habis. Silakan coba lagi."),
+          ],
           components: [],
         });
       }

@@ -1,6 +1,6 @@
-const { Embed } = require("discord.js");
-const config = require("../../config.json");
+const { EmbedBuilder, MessageFlags } = require("discord.js"); // TAMBAHKAN INI
 const { pool } = require("../../functions/database");
+const config = require("../../config.json");
 
 module.exports = {
   customId: "reverify",
@@ -8,73 +8,61 @@ module.exports = {
     const DiscordID = interaction.user.id;
 
     try {
-      const [result] = await pool.execute(
-        "SELECT * FROM playerucp WHERE DiscordID = ?",
+      // Cek apakah user sudah terdaftar
+      const [rows] = await pool.query(
+        "SELECT ucp FROM playerucp WHERE DiscordID = ?",
         [DiscordID]
       );
 
-      if (result.length === 0) {
+      if (rows.length === 0) {
         return interaction.reply({
           embeds: [
             new EmbedBuilder()
-              .setTitle("Akun Tidak Terdaftar")
-              .setDescription("Akun Discord ini tidak terdaftar di server. Silakan register terlebih dahulu.")
-              .setColor(0xff0000)
+              .setColor(0xFF0000)
+              .setTitle("Akun Tidak Ditemukan")
+              .setDescription("Anda belum memiliki akun UCP yang terdaftar!")
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral // GANTI DARI ephemeral: true
         });
       }
 
-      const roleCitizen = interaction.guild.roles.cache.get(
-        config.roles.roleCitizen
-      );
-      const member = interaction.guild.members.cache.get(DiscordID);
-
-      if (!roleCitizen) {
+      // Berikan role Verified
+      const verifiedRole = interaction.guild.roles.cache.get(config.roles.roleCitizen);
+      
+      if (!verifiedRole) {
         return interaction.reply({
           embeds: [
             new EmbedBuilder()
-              .setTitle("Role Tidak Ditemukan")
-              .setDescription("Role 'Verified' tidak ditemukan. Hubungi admin untuk bantuan.")
-              .setColor(0xffa500)
+              .setColor(0xFF0000)
+              .setTitle("Error")
+              .setDescription("Role Verified tidak ditemukan!")
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral
         });
       }
 
-      if (member.roles.cache.has(roleCitizen.id)) {
-        return interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle("Anda Sudah Terdaftar")
-              .setDescription("Anda sudah memiliki Verified role.")
-              .setColor(0x00ff00)
-          ],
-          ephemeral: true,
-        });
-      }
-
-      await member.roles.add(roleCitizen);
+      await interaction.member.roles.add(verifiedRole);
 
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
+            .setColor(0x00FF00)
             .setTitle("Reverifikasi Berhasil")
-            .setDescription("Role Verified berhasil ditambahkan ke akun Anda!")
-            .setColor(0x00ff00)
+            .setDescription(`Selamat datang kembali! Role **${verifiedRole.name}** telah diberikan.`)
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
+
     } catch (error) {
-      console.error(error);
+      console.error("Error in reverify:", error);
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
-            .setTitle("Reverifikasi Gagal")
-            .setDescription("Terjadi kesalahan saat memverifikasi ulang akun Anda.")
-            .setColor(0xff0000)
+            .setColor(0xFF0000)
+            .setTitle("Terjadi Kesalahan")
+            .setDescription("Gagal melakukan reverifikasi. Silakan hubungi admin.")
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
     }
   },

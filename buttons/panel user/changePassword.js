@@ -3,7 +3,8 @@ const {
   TextInputBuilder,
   TextInputStyle,
   ActionRowBuilder,
-  InteractionType
+  InteractionType,
+  EmbedBuilder
 } = require("discord.js");
 const { pool } = require("../../functions/database");
 const { sendVerificationCode } = require("../../functions/emailService");
@@ -15,72 +16,9 @@ module.exports = {
       // Pastikan interaction adalah Button
       if (interaction.type !== InteractionType.MessageComponent) return;
 
-      const DiscordID = interaction.user.id;
-
-      const [userRows] = await pool.query(
-        "SELECT * FROM playerucp WHERE DiscordID = ?",
-        [DiscordID]
-      );
-
-      if (userRows.length === 0) {
-        return interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(0xFF0000)
-              .setTitle("UCP Tidak Terdaftar")
-              .setDescription("Anda belum terdaftar di sistem UCP. Silakan daftar terlebih dahulu."),
-          ],
-          flags: 64,
-        });
-      }
-
-      const userData = userRows[0];
-      const email = userData.email;
-
-      if (!email) {
-        return interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(0xFF0000)
-              .setTitle("Email Tidak Ditemukan")
-              .setDescription("Email tidak ditemukan di akun Anda. Silakan update email terlebih dahulu."),
-          ],
-          flags: 64,
-        });
-      }
-
-      // Generate 6 digit verification code
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-      const expiresAt = Date.now() + 300000; // 5 menit
-
-      // Simpan kode di DB
-      await pool.query(
-        "UPDATE playerucp SET temp_verification_code = ?, temp_code_expires = ? WHERE DiscordID = ?",
-        [verificationCode, expiresAt, DiscordID]
-      );
-
-      // Kirim email
-      const emailResult = await sendVerificationCode(email, {
-        ucpName: userData.ucp,
-        verificationCode
-      });
-
-      if (!emailResult.success) {
-        return interaction.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setColor(0xFF0000)
-              .setTitle("Gagal Mengirim Kode Verifikasi")
-              .setDescription(`Gagal mengirim kode verifikasi ke email: ${emailResult.error}`),
-          ],
-          flags: 64,
-        });
-      }
-
-      const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
-
-      // Info ke user tetap ephemeral bisa dikirim setelah modal submit,
-      // tapi di sini kita langsung show modal sebagai response pertama
+      // ═══════════════════════════════════════════════════════════
+      // LANGKAH 1: SHOW MODAL DULU (SEBELUM 3 DETIK!)
+      // ═══════════════════════════════════════════════════════════
       const modal = new ModalBuilder()
         .setCustomId("change_password_modal")
         .setTitle("Change Password");
@@ -118,17 +56,68 @@ module.exports = {
         new ActionRowBuilder().addComponents(confirmPasswordInput)
       );
 
-      // Show modal sebagai **response pertama** → aman dari InteractionAlreadyReplied
+      // SHOW MODAL LANGSUNG (ini merespons interaction)
       await interaction.showModal(modal);
+
+      // ═══════════════════════════════════════════════════════════
+      // LANGKAH 2: KIRIM EMAIL DI BACKGROUND (SETELAH MODAL MUNCUL)
+      // ═══════════════════════════════════════════════════════════
+      const DiscordID = interaction.user.id;
+
+      const [userRows] = await pool.query(
+        "SELECT * FROM playerucp WHERE DiscordID = ?",
+        [DiscordID]
+      );
+
+      if (userRows.length === 0) {
+        console.error(`User dengan DiscordID ${DiscordID} tidak ditemukan di database`);
+        return; // Modal sudah ditampilkan, tidak bisa reply lagi
+      }
+
+      const userData = userRows[0];
+      const email = userData.email;
+
+      if (!email) {
+        console.error(`Email tidak ditemukan untuk DiscordID ${DiscordID}`);
+        return;
+      }
+
+      // Generate 6 digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = Date.now() + 300000; // 5 menit
+
+      // Simpan kode di DB
+      await pool.query(
+        "UPDATE playerucp SET temp_verification_code = ?, temp_code_expires = ? WHERE DiscordID = ?",
+        [verificationCode, expiresAt, DiscordID]
+      );
+
+      // Kirim email
+      const emailResult = await sendVerificationCode(email, {
+        ucpName: userData.ucp,
+        verificationCode
+      });
+
+      if (!emailResult.success) {
+        console.error(`Gagal mengirim email ke ${email}: ${emailResult.error}`);
+      } else {
+        const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3');
+        console.log(`Verification code sent: ${maskedEmail}`);
+      }
 
     } catch (error) {
       console.error("Error in change_password button:", error);
 
+      // Jika modal belum ditampilkan, baru reply error
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          content: "❌ Terjadi kesalahan. Silakan coba lagi.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setDescription("Terjadi kesalahan. Silakan coba lagi."),
+          ],
           flags: 64,
-        });
+        }).catch(() => {}); // Ignore jika sudah replied
       }
     }
   },

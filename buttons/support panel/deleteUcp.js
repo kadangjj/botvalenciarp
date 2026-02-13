@@ -13,7 +13,11 @@ module.exports = {
 
       if (!userData) {
         return await interaction.reply({
-          content: "❌ Akun UCP Anda tidak ditemukan di database.",
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xFF0000)
+              .setDescription("❌ Akun UCP Anda tidak ditemukan di database."),
+          ],
           ephemeral: true,
         });
       }
@@ -23,16 +27,16 @@ module.exports = {
       
       const confirmEmbed = new EmbedBuilder()
         .setColor("#FFA500")
-        .setTitle("⚠️ KONFIRMASI PENGHAPUSAN UCP")
+        .setTitle("KONFIRMASI PENGHAPUSAN UCP")
         .setDescription(`Anda akan menghapus akun UCP: **${userData.ucp}**`)
         .addFields(
           {
-            name: "📛 UCP Name",
+            name: "UCP Name",
             value: userData.ucp,
             inline: true
           },
           {
-            name: "🚫 WARNING",
+            name: "WARNING",
             value: "**THIS ACTION CANNOT BE UNDONE!**\nAll character data, progress, and items will be permanently lost!",
             inline: false
           }
@@ -74,15 +78,21 @@ module.exports = {
 
           if (isDeleted) {
             await i.update({
-              content: `✅ Akun UCP **${userData.ucp}** telah berhasil dihapus permanen!`,
-              embeds: [],
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0x00FF00)
+                  .setDescription(`Akun UCP **${userData.ucp}** telah berhasil dihapus permanen!`),
+              ],
               components: [],
               ephemeral: true
             });
           } else {
             await i.update({
-              content: "❌ Gagal menghapus akun UCP Anda. Silakan coba lagi.",
-              embeds: [],
+              embeds: [
+                new EmbedBuilder()
+                  .setColor(0xFF0000)
+                  .setDescription("Gagal menghapus akun UCP Anda. Silakan coba lagi."),
+              ],
               components: [],
               ephemeral: true
             });
@@ -90,8 +100,11 @@ module.exports = {
         } else if (i.customId === 'cancel_delete_ucp') {
           // User batalkan
           await i.update({
-            content: "❌ Penghapusan UCP dibatalkan. Data Anda tetap aman.",
-            embeds: [],
+            embeds: [
+              new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setDescription("Penghapusan UCP dibatalkan. Data Anda tetap aman."),
+            ],
             components: [],
             ephemeral: true
           });
@@ -102,8 +115,11 @@ module.exports = {
         if (collected.size === 0) {
           // Timeout
           interaction.editReply({
-            content: "⏰ Waktu konfirmasi habis. Penghapusan UCP dibatalkan.",
-            embeds: [],
+            embeds: [
+              new EmbedBuilder()
+                .setColor(0xFF0000)
+                .setDescription("Waktu konfirmasi habis. Penghapusan UCP dibatalkan."),
+            ],
             components: [],
             ephemeral: true
           }).catch(() => {});
@@ -113,7 +129,11 @@ module.exports = {
     } catch (error) {
       console.error("Error in UCP deletion:", error);
       await interaction.reply({
-        content: "❌ Terjadi kesalahan saat memproses permintaan Anda.",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription("Terjadi kesalahan saat memproses permintaan Anda."),
+        ],
         ephemeral: true,
       });
     }

@@ -24,10 +24,13 @@ module.exports = {
       });
     }
 
-    const embed = new EmbedBuilder()
-      .setTitle("🚀 Valencia Roleplay")
+   const embed = new EmbedBuilder()
+      .setAuthor({
+        name: "Valencia Roleplay",
+        iconURL: "https://cdn.discordapp.com/attachments/1330494882778845301/1443922699033514034/20251128_181111.jpg?ex=692ad54e&is=692983ce&hm=53bb27e9c56bcb51e1fcf74d246d3f9aab58bd59f86902c557608c63df55284f&"
+      })
       .setDescription(
-        "## 🚀 User Control Panel Valencia Roleplay\n\n" +
+        "## User Control Panel Valencia Roleplay\n\n" +
         "Selamat datang di User Control Panel (UCP) Valencia Roleplay.\n" +
         "Panel ini dirancang untuk membantu Anda mengelola akun dan karakter dengan mudah.\n\n" +
         "Gunakan tombol di bawah untuk mengakses fitur yang tersedia.\n\n" +

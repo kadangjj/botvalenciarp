@@ -28,7 +28,11 @@ module.exports = {
 
     if (existingTicket) {
       return interaction.editReply({
-        content: `❌ Anda sudah memiliki ticket DONATE yang aktif di ${existingTicket}!`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription(`Anda sudah memiliki ticket DONATE yang aktif di ${existingTicket}!`),
+        ],
       });
     }
 
@@ -97,7 +101,11 @@ module.exports = {
       });
 
       await interaction.editReply({
-        content: `✅ Ticket DONATE berhasil dibuat! ${ticketChannel}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setDescription(`Ticket DONATE berhasil dibuat! ${ticketChannel}`),
+        ],
       });
 
       // LOG: Send to log channel
@@ -105,7 +113,7 @@ module.exports = {
       if (logChannel) {
         const logEmbed = new EmbedBuilder()
           .setColor("#00FF00")
-          .setTitle("📂 TICKET OPENED")
+          .setTitle("TICKET OPENED")
           .setDescription(`**Type:** DONATE\n**Channel:** ${ticketChannel}\n**User:** ${member}`)
           .addFields(
             { name: "User ID", value: member.id, inline: true },
@@ -122,7 +130,11 @@ module.exports = {
     } catch (error) {
       console.error("❌ Error creating donate ticket:", error);
       await interaction.editReply({
-        content: "❌ Terjadi kesalahan saat membuat ticket!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription("Terjadi kesalahan saat membuat ticket!"),
+        ],
       });
     }
   },

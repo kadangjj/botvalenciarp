@@ -1,9 +1,6 @@
-const {
-  EmbedBuilder,
-} = require("discord.js");
+const { EmbedBuilder, MessageFlags } = require("discord.js");
 const { pool } = require("../../functions/database");
 const { validateICOwner } = require("../../functions/validate_ic_owner");
-const { writeFileSync, readFileSync } = require("fs");
 const config = require("../../config.json");
 
 // Fungsi untuk menghapus pending request dari JSON
@@ -27,15 +24,112 @@ function removePendingRequest(characterName) {
 }
 
 // Fungsi validasi Character Story
-// Fungsi validasi Character Story
-function validateCharacterStory(story) {
+function validateCharacterStory(story, characterName) {
   const errors = [];
   
-  // 1. Cek kata alay/tidak formal (dengan word boundary)
-  const alayWords = ['gue', 'gw', 'lu', 'loe', 'gua', 'ane', 'gan', 'wkwk', 'njir', 'anjay', 'kuy', 'ygy'];
+  // 0. Cek apakah story menyebutkan nama karakter
+  const firstName = characterName.split('_')[0];
+  const lastName = characterName.split('_')[1];
   const storyLower = story.toLowerCase();
+  
+  const firstNameRegex = new RegExp(`\\b${firstName}\\b`, 'i');
+  const lastNameRegex = new RegExp(`\\b${lastName}\\b`, 'i');
+  
+  if (!firstNameRegex.test(story) && !lastNameRegex.test(story)) {
+    errors.push(`Story harus menyebutkan nama karakter (${firstName} atau ${lastName})`);
+  }
+
+  // 0.5. Cek kata yang masuk akal (deteksi gibberish/random words)
+  const words = story.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+  
+  // Cek pola konsonan berlebihan (kata Indonesia jarang punya 4+ konsonan berturut)
+  const gibberishWords = words.filter(word => {
+    // Lebih dari 4 konsonan berturut-turut
+    if (/[bcdfghjklmnpqrstvwxyz]{4,}/i.test(word)) return true;
+    // Tidak ada vokal sama sekali tapi panjang > 3
+    if (word.length > 3 && !/[aiueo]/i.test(word)) return true;
+    // Pola huruf yang tidak natural (misal: qxzjk)
+    if (/[qxz]{2,}/i.test(word)) return true;
+    return false;
+  });
+  
+  if (gibberishWords.length > 3) {
+    errors.push(`Terdeteksi ${gibberishWords.length} kata tidak wajar: ${gibberishWords.slice(0, 3).join(', ')}...`);
+  }
+
+  // 0.6. Cek kata berulang (spam)
+  const wordFrequency = {};
+  words.forEach(word => {
+    if (word.length > 3) {
+      wordFrequency[word] = (wordFrequency[word] || 0) + 1;
+    }
+  });
+  
+  const totalWords = words.length;
+  for (const [word, count] of Object.entries(wordFrequency)) {
+    if (count > totalWords * 0.15) {
+      errors.push(`Kata "${word}" terlalu sering diulang (${count} kali)`);
+      break;
+    }
+  }
+
+  // 0.7. Cek keyboard mashing pattern
+  const keyboardPatterns = [
+    /asdf/gi, /qwer/gi, /zxcv/gi, /hjkl/gi,
+    /(.)\1{4,}/gi, // 5 huruf sama berturut
+    /(?:qw|we|er|rt|ty|yu|ui|io|op|as|sd|df|fg|gh|hj|jk|kl|zx|xc|cv|vb|bn|nm){3,}/gi // Keyboard sequence
+  ];
+  
+  for (const pattern of keyboardPatterns) {
+    if (pattern.test(story)) {
+      errors.push('Story mengandung huruf acak (keyboard mashing)');
+      break;
+    }
+  }
+
+  // 0.8. Cek minimal kata umum Bahasa Indonesia (simple dictionary check)
+  const commonIndonesianWords = [
+    'yang', 'di', 'ke', 'dari', 'untuk', 'pada', 'dengan', 'adalah', 'ini', 'itu',
+    'dan', 'atau', 'juga', 'sangat', 'sudah', 'akan', 'telah', 'sedang', 'tidak',
+    'ada', 'dalam', 'oleh', 'seperti', 'antara', 'sebagai', 'karena', 'namun',
+    'tetapi', 'jika', 'maka', 'saat', 'ketika', 'saya', 'dia', 'mereka', 'ia',
+    'tahun', 'hari', 'kota', 'rumah', 'sekolah', 'keluarga', 'orang', 'anak'
+  ];
+  
+  const foundCommonWords = commonIndonesianWords.filter(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'i');
+    return regex.test(storyLower);
+  });
+  
+  // Story 200+ kata harus minimal ada 10 kata umum
+  if (foundCommonWords.length < 10) {
+    errors.push('Story kurang natural. Gunakan Bahasa Indonesia yang benar');
+  }
+
+  // 0.9. Cek rasio huruf vokal vs konsonan
+  const vowels = story.match(/[aiueo]/gi) || [];
+  const consonants = story.match(/[bcdfghjklmnpqrstvwxyz]/gi) || [];
+  const vowelRatio = vowels.length / (vowels.length + consonants.length);
+  
+  if (vowelRatio < 0.3 || vowelRatio > 0.6) {
+    errors.push('Komposisi huruf tidak wajar (kemungkinan teks random)');
+  }
+
+  // 0.10. Cek panjang rata-rata kata
+  const averageWordLength = words.reduce((sum, word) => sum + word.length, 0) / words.length;
+  if (averageWordLength < 3.5 || averageWordLength > 10) {
+    errors.push('Panjang kata tidak natural');
+  }
+
+  // 0.11. Cek minimal tanda baca
+  const punctuationCount = (story.match(/[.,!?;:]/g) || []).length;
+  if (punctuationCount < 8) {
+    errors.push('Story kurang tanda baca (minimal 8 tanda baca)');
+  }
+
+  // 1. Cek kata alay/tidak formal
+  const alayWords = ['gue', 'gw', 'lu', 'loe', 'gua', 'ane', 'gan', 'wkwk', 'njir', 'anjay', 'kuy', 'ygy'];
   const foundAlay = alayWords.filter(word => {
-    // Cek dengan word boundary (spasi, tanda baca, awal/akhir kalimat)
     const regex = new RegExp(`\\b${word}\\b`, 'i');
     return regex.test(storyLower);
   });
@@ -44,7 +138,7 @@ function validateCharacterStory(story) {
     errors.push(`Menggunakan kata tidak formal: ${foundAlay.join(', ')}`);
   }
 
-  // 2. Cek sudut pandang (tidak boleh ada aku/saya/gue) dengan word boundary
+  // 2. Cek sudut pandang
   const firstPersonWords = ['aku', 'saya', 'gue', 'gua', 'ane'];
   const foundFirstPerson = firstPersonWords.some(word => {
     const regex = new RegExp(`\\b${word}\\b`, 'i');
@@ -55,13 +149,22 @@ function validateCharacterStory(story) {
     errors.push('Menggunakan sudut pandang orang pertama (harus orang ketiga)');
   }
 
-  // 3. Cek jumlah paragraf (minimal 3)
+  // 3. Cek jumlah paragraf
   const paragraphs = story.trim().split('\n\n').filter(p => p.trim().length > 0);
   if (paragraphs.length < 3) {
     errors.push(`Paragraf kurang (minimal 3, Anda: ${paragraphs.length})`);
   }
 
-  // 4. Cek jumlah kata (minimal 200)
+  // 3.5. Cek setiap paragraf minimal 4 kalimat
+  for (let i = 0; i < paragraphs.length; i++) {
+    const sentences = paragraphs[i].split(/[.!?]+/).filter(s => s.trim().length > 10);
+    if (sentences.length < 4) {
+      errors.push(`Paragraf ${i + 1} kurang kalimat (minimal 4 kalimat bermakna)`);
+      break;
+    }
+  }
+
+  // 4. Cek jumlah kata
   const wordCount = story.trim().split(/\s+/).length;
   if (wordCount < 200) {
     errors.push(`Kata kurang (minimal 200, Anda: ${wordCount})`);
@@ -100,7 +203,7 @@ function validateCharacterStory(story) {
     errors.push(`Mengandung unsur OOC: ${foundOOC.join(', ')}`);
   }
 
-  // 8. Cek SARA/pornografi (kata kasar)
+  // 8. Cek SARA/kata kasar
   const forbiddenWords = ['kontol', 'memek', 'ngentot', 'anjing', 'babi', 'tolol'];
   const foundForbidden = forbiddenWords.some(word => {
     const regex = new RegExp(`\\b${word}\\b`, 'i');
@@ -137,7 +240,7 @@ module.exports = {
             .setTitle("Validasi Gagal")
             .setDescription("Nama karakter bukan milik Anda!")
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -158,7 +261,7 @@ module.exports = {
               .setTitle("Karakter Tidak Ditemukan")
               .setDescription("Karakter tidak ditemukan dalam database!")
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -173,7 +276,7 @@ module.exports = {
               .setDescription(`Karakter **${characterName}** harus minimal **Level 3** untuk membuat character story.\n\n**Level saat ini:** ${characterLevel}\n**Level minimal:** 3`)
               .setFooter({ text: "Main dulu untuk naik level!" })
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral
         });
       }
 
@@ -187,7 +290,7 @@ module.exports = {
               .setTitle("Sudah Memiliki Story")
               .setDescription(`Karakter **${characterName}** sudah memiliki character story!`)
           ],
-          ephemeral: true,
+          flags: MessageFlags.Ephemeral
         });
       }
       
@@ -200,35 +303,29 @@ module.exports = {
             .setTitle("Kesalahan Database")
             .setDescription("Terjadi kesalahan saat memeriksa data karakter!")
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
     }
 
     // VALIDASI CHARACTER STORY
-    const validationErrors = validateCharacterStory(story);
+    const validationErrors = validateCharacterStory(story, characterName);
 
     // AUTO REJECT jika ada error
     if (validationErrors.length > 0) {
-      // Hapus dari pending jika ada
-      removePendingRequest(characterName);
-      
       return interaction.reply({
         embeds: [
           new EmbedBuilder()
             .setColor(0xFF0000)
             .setTitle("Character Story Ditolak")
-            .setDescription(`Character story untuk **${characterName}** tidak memenuhi syarat.`)
-            .addFields({
-              name: "Kesalahan yang ditemukan:",
-              value: validationErrors.map((error, index) => `${index + 1}. ${error}`).join('\n'),
-              inline: false
-            })
+            .setDescription(
+              `Character story untuk **${characterName}** tidak memenuhi syarat.\n\n**Kesalahan yang ditemukan:**\n${validationErrors.map((error, index) => `${index + 1}. ${error}`).join('\n')}`
+            )
             .addFields({
               name: "Syarat Character Story",
               value: "• **Level minimal 3**\n• Minimal 200 kata dan 3 paragraf\n• Menggunakan bahasa formal (EYD)\n• Sudut pandang orang ketiga\n• Tidak mengandung OOC/nama terkenal\n• Realistis sesuai roleplay GTA SA"
             })
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
     }
 
@@ -237,19 +334,24 @@ module.exports = {
       const updateQuery = `UPDATE players SET characterstory = 1 WHERE username = ?`;
       await pool.query(updateQuery, [characterName]);
 
-      // Hapus dari pending requests
-      removePendingRequest(characterName);
-
       console.log(`Character story auto-approved for ${characterName}`);
 
       // Log ke admin channel
+     // Log ke admin channel
       const adminChannel = interaction.client.channels.cache.get(
         config.channels.adminLogsCS
       );
-      
+
       if (adminChannel) {
         const wordCount = story.trim().split(/\s+/).length;
         const paragraphCount = story.trim().split('\n\n').filter(p => p.trim().length > 0).length;
+
+        // Ambil 3 baris pertama sebagai preview
+        const storyLines = story.split('\n');
+        const preview = storyLines.slice(0, 5).join('\n');
+        const previewText = preview.length > 300 
+          ? preview.substring(0, 297) + "..." 
+          : preview;
 
         const logEmbed = new EmbedBuilder()
           .setColor(0x00FF00)
@@ -259,7 +361,7 @@ module.exports = {
             { name: "Nama IC", value: characterName, inline: true },
             { name: "Diajukan Oleh", value: `<@${DiscordID}>`, inline: true },
             { name: "Statistik", value: `${wordCount} kata | ${paragraphCount} paragraf`, inline: true },
-            { name: "Story", value: story.length > 1000 ? story.substring(0, 1000) + "..." : story }
+            { name: "Preview", value: `${previewText}\n\n*[Lihat file attachment untuk story lengkap]*` }
           )
           .setTimestamp()
           .setFooter({
@@ -267,7 +369,17 @@ module.exports = {
             iconURL: interaction.user.displayAvatarURL(),
           });
 
-        await adminChannel.send({ embeds: [logEmbed] });
+        // Kirim story lengkap sebagai file
+        const { AttachmentBuilder } = require('discord.js');
+        const buffer = Buffer.from(story, 'utf-8');
+        const attachment = new AttachmentBuilder(buffer, { 
+          name: `${characterName}_story.txt` 
+        });
+
+        await adminChannel.send({ 
+          embeds: [logEmbed], 
+          files: [attachment] 
+        });
       }
 
       return interaction.reply({
@@ -281,7 +393,7 @@ module.exports = {
               value: "Approved secara otomatis"
             })
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
 
     } catch (error) {
@@ -293,7 +405,7 @@ module.exports = {
             .setTitle("Kesalahan Sistem")
             .setDescription("Gagal menyimpan character story ke database!")
         ],
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral
       });
     }
   },

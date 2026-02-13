@@ -28,7 +28,11 @@ module.exports = {
 
     if (existingTicket) {
       return interaction.editReply({
-        content: `❌ Anda sudah memiliki ticket REPORT yang aktif di ${existingTicket}!`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription(`Anda sudah memiliki ticket REPORT yang aktif di ${existingTicket}!`),
+        ],
       });
     }
 
@@ -67,7 +71,7 @@ module.exports = {
       // Welcome embed
       const welcomeEmbed = new EmbedBuilder()
         .setColor("#FF0000")
-        .setTitle("🚨 TICKET REPORT PLAYER")
+        .setTitle("TICKET REPORT PLAYER")
         .setDescription(
           `Halo ${member}!\n\n` +
           "Terima kasih telah membuat laporan.\n\n" +
@@ -99,7 +103,11 @@ module.exports = {
       });
 
       await interaction.editReply({
-        content: `✅ Ticket REPORT berhasil dibuat! ${ticketChannel}`,
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x00FF00)
+            .setDescription(`Ticket REPORT berhasil dibuat! ${ticketChannel}`),
+        ],
       });
 
       // LOG: Send to log channel
@@ -107,7 +115,7 @@ module.exports = {
       if (logChannel) {
         const logEmbed = new EmbedBuilder()
           .setColor("#FF0000")
-          .setTitle("📂 TICKET OPENED")
+          .setTitle("TICKET OPENED")
           .setDescription(`**Type:** REPORT\n**Channel:** ${ticketChannel}\n**User:** ${member}`)
           .addFields(
             { name: "User ID", value: member.id, inline: true },
@@ -124,7 +132,11 @@ module.exports = {
     } catch (error) {
       console.error("❌ Error creating report ticket:", error);
       await interaction.editReply({
-        content: "❌ Terjadi kesalahan saat membuat ticket!",
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xFF0000)
+            .setDescription("Terjadi kesalahan saat membuat ticket!"),
+        ],
       });
     }
   },

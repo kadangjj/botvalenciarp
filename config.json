@@ -2,6 +2,7 @@
   "token": "MTAzMTE4MzA1OTI2NzExMzAzMQ.GiqJfu.GggNt-Q-1rJxQTfAwVjTlpoAF7WMuEQLLdqCjY",
   "dccBotId": "1031183059267113031",
   "clientId": "1031183059267113031",
+  "rapidapi_key": "582c106100msh1a916b6bfabb343p1c1e52jsna5eb0c9e8e13",
   "guildId": "1330494881746911283",
   "server": {
     "serverIP": "35.198.243.227",
@@ -28,7 +29,8 @@
     "serverstatus": "1444105165601771521",
     "Faqchannel": "1444810379170676756",
     "serverstats": "1444472158532145152",
-    "leaderboard": "1444105165601771521"
+    "leaderboard": "1444105165601771521",
+    "updateLogs": "1332004981112307712"
   },
   "database": {
     "host": "10.148.0.7",
