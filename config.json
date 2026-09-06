@@ -1,27 +1,29 @@
 {
-  "token": "MTAzMTE4MzA1OTI2NzExMzAzMQ.GiqJfu.GggNt-Q-1rJxQTfAwVjTlpoAF7WMuEQLLdqCjY",
-  "dccBotId": "1031183059267113031",
-  "clientId": "1031183059267113031",
-  "rapidapi_key": "582c106100msh1a916b6bfabb343p1c1e52jsna5eb0c9e8e13",
-  "guildId": "1330494881746911283",
+  "token": "",
+  "dccBotId": "",
+  "clientId": "",
+  "rapidapi_key": "",
+  "guildId": "",
   "server": {
-    "serverIP": "35.198.243.227",
+    "serverIP": "",
     "serverPort": "7777",
-    "logo": "https://media.discordapp.net/attachments/1330494882778845301/1443922699033514034/20251128_181111.jpg?ex=6932be4e&is=69316cce&hm=5babb52a2e6b740556e584923f3da3f411c37f33f1412e97544a3a233444128e&=&format=webp&width=981&height=981"
+    "logo": ""
   },
   "roles": {
     "adminRole": "1330494881759625272",
     "serversupport": "1444269566292136059",
+    "FounderRole": "1330494881759625274",
     "roleCitizen": "1330494881746911286"
   },
   "ticket": {
     "categoryId": "1333598021170233374",
+    "categoryDonate": "1333598021170233374",
     "logChannelId": "1333608143472693379"
   },
   "email": {
     "service": "gmail",
-    "user": "amarraden5@@gmail.com",
-    "pass": "gahexiopmmpfmqlw"
+    "user": "valenciarealityproject@gmail.com",
+    "pass": ""
   },
   "channels": {
     "logsaccCs": "1444810379170676756",

@@ -28,7 +28,7 @@ module.exports = {
       .setCustomId("characterName")
       .setLabel("Masukkan nama karakter")
       .setStyle(TextInputStyle.Short)
-      .setPlaceholder("Contoh: John_Doe")
+      .setPlaceholder("Contoh: Lieva Duscha")
       .setRequired(true);
 
     const row = new ActionRowBuilder().addComponents(characterNameInput);

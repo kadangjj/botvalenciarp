@@ -1,101 +1,128 @@
 const { EmbedBuilder } = require("discord.js");
-const axios = require("axios");
+const dgram = require("dgram");
 const config = require("../config.json");
 
 const CHANNEL_ID = config.channels.serverstats;
-const SERVER_IP = config.server.serverIP || "35.198.243.227";
-const SERVER_PORT = config.server.serverPort || "7777";
-const API_URL = "http://35.198.243.227:6666/api/server-status"; // Ganti dengan VPS IP jika deploy
+const SERVER_IP = config.server.serverIP || "34.101.59.153";
+const SERVER_PORT = parseInt(config.server.serverPort) || 7777;
 
 let embedMessage = null;
 let lastServerData = null;
 
-async function checkServerStatus() {
-  try {
-    const response = await axios.get(API_URL, { 
-      timeout: 5000,
-      headers: {
-        'User-Agent': 'Valencia-Discord-Bot/1.0'
+// ─── SA-MP Query (tanpa API eksternal) ───────────────────────────────────────
+function querySAMP(ip, port, timeout = 5000) {
+  return new Promise((resolve) => {
+    const socket = dgram.createSocket("udp4");
+    let resolved = false;
+
+    const fallback = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        socket.close();
+        resolve({ online: false });
+      }
+    }, timeout);
+
+    // Build SA-MP query packet
+    const ipParts = ip.split(".").map(Number);
+    const portLow = port & 0xff;
+    const portHigh = (port >> 8) & 0xff;
+
+    const packet = Buffer.alloc(11);
+    packet.write("SAMP", 0, "ascii");
+    packet[4] = ipParts[0];
+    packet[5] = ipParts[1];
+    packet[6] = ipParts[2];
+    packet[7] = ipParts[3];
+    packet[8] = portLow;
+    packet[9] = portHigh;
+    packet[10] = 0x69; // 'i' = info
+
+    socket.on("message", (msg) => {
+      if (resolved) return;
+      resolved = true;
+      clearTimeout(fallback);
+      socket.close();
+
+      try {
+        // Parse SA-MP info response
+        // Offset 11: password(1), players(2), maxplayers(2), hostnameLen(4)+hostname, gamemodeLen(4)+gamemode, langLen(4)+lang
+        let offset = 11;
+
+        const password = msg[offset++] === 1;
+        const players = msg.readUInt16LE(offset); offset += 2;
+        const maxPlayers = msg.readUInt16LE(offset); offset += 2;
+
+        const hostnameLen = msg.readUInt32LE(offset); offset += 4;
+        const hostname = msg.toString("ascii", offset, offset + hostnameLen); offset += hostnameLen;
+
+        const gamemodeLen = msg.readUInt32LE(offset); offset += 4;
+        const gamemode = msg.toString("ascii", offset, offset + gamemodeLen); offset += gamemodeLen;
+
+        const langLen = msg.readUInt32LE(offset); offset += 4;
+        const language = msg.toString("ascii", offset, offset + langLen);
+
+        resolve({ online: true, password, players, maxPlayers, hostname, gamemode, language });
+      } catch (e) {
+        resolve({ online: false });
       }
     });
-    
-    // Log response untuk debug
-  //  console.log('API Response:', response.data);
-    
-    if (!response.data.success) {
-     // console.log('❌ Server offline - API returned error');
-      return {
-        status: "🔴 OFFLINE",
-        players: "0/0",
-        maxPlayers: 0,
-        language: "N/A",
-        gamemode: "N/A",
-      };
-    }
 
-    const data = response.data.data;
-    
-   
-    
-    // Cek maintenance (password protected)
-    if (data.password === true) {
-      return {
-        status: "🟡 MAINTENANCE",
-        players: `${data.players}/${data.maxPlayers}`,
-        maxPlayers: data.maxPlayers,
-        language: data.language || "Indonesian",
-        gamemode: data.gamemode || "Roleplay",
-      };
-    }
+    socket.on("error", () => {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(fallback);
+        socket.close();
+        resolve({ online: false });
+      }
+    });
 
-    // Server online
+    socket.send(packet, 0, packet.length, port, ip);
+  });
+}
+
+// ─── Check & format server status ────────────────────────────────────────────
+async function checkServerStatus() {
+  const data = await querySAMP(SERVER_IP, SERVER_PORT);
+
+  if (!data.online) {
     return {
-      status: data.online ? "🟢 ONLINE" : "🔴 OFFLINE",
+      status: "🔴 OFFLINE",
+      players: "0/0",
+      language: "N/A",
+      gamemode: "N/A",
+      hostname: "Valencia Roleplay",
+    };
+  }
+
+  if (data.password) {
+    return {
+      status: "🟡 MAINTENANCE",
       players: `${data.players}/${data.maxPlayers}`,
-      maxPlayers: data.maxPlayers,
       language: data.language || "Indonesian",
       gamemode: data.gamemode || "Roleplay",
       hostname: data.hostname || "Valencia Roleplay",
-      ping: data.ping || 0
-    };
-
-  } catch (error) {
-    console.error("❌ Error fetching server status:", error.message);
-    return {
-      status: "🔴 OFFLINE",
-      players: "N/A",
-      maxPlayers: "N/A",
-      language: "N/A",
-      gamemode: "N/A",
     };
   }
+
+  return {
+    status: "🟢 ONLINE",
+    players: `${data.players}/${data.maxPlayers}`,
+    language: data.language || "Indonesian",
+    gamemode: data.gamemode || "Roleplay",
+    hostname: data.hostname || "Valencia Roleplay",
+  };
 }
 
+// ─── Build & send/edit embed ──────────────────────────────────────────────────
 async function updateEmbed(client) {
   try {
     const serverData = await checkServerStatus();
-    
-    // Debug log dengan timestamp
-    const timestamp = new Date().toLocaleTimeString('id-ID', { 
-      hour: '2-digit', 
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-    
-    //console.log(`[${timestamp}] ${serverData.status} | Players: ${serverData.players} | Language: ${serverData.language}`);
-    
-    // Cek apakah data berubah
+
     const dataChanged = JSON.stringify(lastServerData) !== JSON.stringify(serverData);
-    
-    if (!dataChanged && embedMessage) {
-      //console.log('⏸️  Data tidak berubah, skip update');
-      return;
-    }
-    
-    //console.log('📊 Data berubah, updating embed...');
+    if (!dataChanged && embedMessage) return;
     lastServerData = { ...serverData };
- 
+
     const embed = new EmbedBuilder()
       .setColor(
         serverData.status === "🟢 ONLINE"
@@ -107,50 +134,26 @@ async function updateEmbed(client) {
       .setTitle("Valencia Roleplay Server Status")
       .setURL("https://valenciaroleplay.id")
       .addFields(
-        {
-          name: "> STATUS",
-          value: `\`\`\`${serverData.status}\`\`\``,
-          inline: true,
-        },
-        {
-          name: "> PLAYERS",
-          value: `\`\`\`${serverData.players}\`\`\``,
-          inline: true,
-        },
+        { name: "> STATUS",  value: `\`\`\`${serverData.status}\`\`\``, inline: true },
+        { name: "> PLAYERS", value: `\`\`\`${serverData.players}\`\`\``, inline: true },
         { name: "\u200B", value: "\u200B", inline: true },
-        {
-          name: "> CONNECT",
-          value: `\`\`\`${SERVER_IP}:${SERVER_PORT}\`\`\``,
-          inline: false,
-        },
-        {
-          name: "> LANGUAGE",
-          value: `\`\`\`${serverData.language}\`\`\``,
-          inline: true,
-        },
-        {
-          name: "> GAMEMODE",
-          value: `\`\`\`${serverData.gamemode}\`\`\``,
-          inline: true,
-        }
+        { name: "> CONNECT",  value: `\`\`\`${SERVER_IP}:${SERVER_PORT}\`\`\``, inline: false },
+        { name: "> LANGUAGE", value: `\`\`\`${serverData.language}\`\`\``, inline: true },
+        { name: "> GAMEMODE", value: `\`\`\`${serverData.gamemode}\`\`\``, inline: true }
       )
       .setThumbnail(
-        `https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg`
+        "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg"
       )
       .setImage(
-        `https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg`
+        "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg"
       )
       .setFooter({
-        text: `Last Update: ${new Date().toLocaleString('id-ID', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit', 
-          second: '2-digit',
-          hour12: false
+        text: `Last Update: ${new Date().toLocaleString("id-ID", {
+          day: "2-digit", month: "2-digit", year: "numeric",
+          hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
         })} WIB`,
-        iconURL: "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg",
+        iconURL:
+          "https://cdn.discordapp.com/attachments/1330494882950676579/1444183980994986117/20251128_181111.jpg",
       })
       .setTimestamp();
 
@@ -165,10 +168,8 @@ async function updateEmbed(client) {
 
     if (!embedMessage) {
       embedMessage = await channel.send({ embeds: [embed] });
-     // console.log('✅ Embed message created');
     } else {
       await embedMessage.edit({ embeds: [embed] });
-     // console.log('✅ Embed message updated');
     }
 
   } catch (error) {
@@ -176,13 +177,11 @@ async function updateEmbed(client) {
   }
 }
 
+// ─── Auto update ──────────────────────────────────────────────────────────────
 function startAutoUpdate(client) {
-  console.log('🚀 Starting auto update for server status...');
-  updateEmbed(client); // Update pertama kali
-  
-  setInterval(() => {
-    updateEmbed(client);
-  }, 900); // Update setiap 3 detik
+  console.log("🚀 Starting auto update for server status (direct SA-MP query)...");
+  updateEmbed(client);
+  setInterval(() => updateEmbed(client), 10000); // update setiap 10 detik
 }
 
 module.exports = { updateEmbed, startAutoUpdate };

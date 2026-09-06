@@ -46,7 +46,10 @@ module.exports = {
       });
     }
 
-    const playerName = interaction.options.getString("name");
+    // Auto-replace spasi dengan underscore
+    let playerName = interaction.options.getString("name");
+    playerName = playerName.replace(/ /g, "_");    
+    
     const banTime = interaction.options.getInteger("time");
     const banReason = interaction.options.getString("reason");
     const discordUser = interaction.user.tag;

@@ -33,7 +33,10 @@ module.exports = {
       });
     }
 
-    const playerName = interaction.options.getString("name");
+    // Auto-replace spasi dengan underscore
+    let playerName = interaction.options.getString("name");
+    playerName = playerName.replace(/ /g, "_");
+
     const discordUser = interaction.user.tag;
 
     await interaction.deferReply();
